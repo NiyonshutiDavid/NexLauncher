@@ -59,7 +59,7 @@ struct SettingsPage: View {
                 }
                 Spacer()
             }
-            .frame(width: 210).padding(24).padding(.top, HeaderMetrics.contentInset - 24)
+            .frame(width: 210).padding(24).padding(.top, HeaderMetrics.contentInset)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {

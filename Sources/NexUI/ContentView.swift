@@ -28,10 +28,11 @@ private struct RootContent: View {
                 .transition(.opacity.combined(with: .offset(x: 18)))
                 .background(theme.canvas)
                 .animation(.smooth(duration: 0.3), value: pageKey)
+                // An invisible item: with an empty toolbar macOS drops the sidebar panel below the window controls.
+                .toolbar { ToolbarSpacer(.flexible) }
         }
         // The header is drawn by each page (FadingHeader), WhatsApp-style. The system toolbar stays (empty and
         // transparent) so the window controls remain; WindowStyler hides it in full screen.
-        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .background(WindowStyler())
         .overlay {
             if model.showOnboarding { OnboardingView(model: model).transition(.opacity) }

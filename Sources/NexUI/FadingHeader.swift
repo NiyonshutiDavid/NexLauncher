@@ -7,7 +7,7 @@ enum HeaderMetrics {
     /// The header row sits level with the window controls, from the very top of the window.
     static let height: CGFloat = 54
     /// Scroll content starts below the header but scrolls up under the fade.
-    static let contentInset: CGFloat = 64
+    static let contentInset: CGFloat = 8
 }
 
 extension View {
