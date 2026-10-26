@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import WidgetKit
 import NexCore
 import NexProcess
 import NexGit
@@ -38,6 +39,8 @@ public final class AppModel {
     public let processes: ProcessManager
     public let git: GitService
     let snapshotDirectory: URL
+    /// Asks WidgetKit to refresh; replaced in tests.
+    public var reloadWidgets: () -> Void = { WidgetCenter.shared.reloadAllTimelines() }
 
     public init(settings: SettingsStore? = nil,
                 overrides: OverrideStore? = nil,
@@ -49,6 +52,7 @@ public final class AppModel {
         self.processes = processes ?? ProcessManager()
         self.git = git
         self.snapshotDirectory = snapshotDirectory ?? SharedContainer.defaultDirectory
+        self.processes.onChange = { [weak self] in self?.publishSnapshot() }
     }
 
     public var greeting: String {
@@ -78,6 +82,7 @@ public final class AppModel {
         let root = settings.settings.scanRoot
         let scanner = ProjectScanner(overrides: overrides)
         projects = await Task.detached { scanner.scan(root: root) }.value
+        publishSnapshot()
         Task { await refreshGitBadges() }
     }
 
@@ -101,8 +106,30 @@ public final class AppModel {
 }
 
 extension AppModel {
-    /// Publishes running/pinned state for the widgets. Filled in by the widget task.
-    public func publishSnapshot() {}
+    /// Writes running/pinned state where the widgets read it, then asks them to refresh.
+    public func publishSnapshot() {
+        let names = Dictionary(uniqueKeysWithValues: projects.map { ($0.id, $0.name) })
+        let running = processes.states.compactMap { id, state -> WidgetSnapshot.Running? in
+            guard state.isActive, let name = names[id.projectID] else { return nil }
+            if case .running(let port) = state { return .init(projectName: name, kind: id.kind, port: port) }
+            return .init(projectName: name, kind: id.kind, port: nil)
+        }.sorted { ($0.projectName, $0.kind.rawValue) < ($1.projectName, $1.kind.rawValue) }
+        let pinned = settings.settings.pinnedProjectIDs.compactMap { id in
+            names[id].map { WidgetSnapshot.PinnedProject(id: id, name: $0) }
+        }
+        SharedContainer.write(WidgetSnapshot(running: running, pinned: pinned), to: snapshotDirectory)
+        reloadWidgets()
+    }
+
+    /// Handles `nexlauncher://run?project=<id>` links from the Quick Launch widget.
+    public func handle(url: URL) async {
+        guard url.scheme == "nexlauncher", url.host == "run",
+              let id = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "project" })?.value,
+              let project = projects.first(where: { $0.id == id }) else { return }
+        let actions = availableActions(for: project).filter { $0 != .flutter }
+        guard let action = actions.contains(.both) ? .both : actions.first else { return }
+        await run(project, kinds: action.kinds)
+    }
 }
 
 extension AppModel {

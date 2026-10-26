@@ -28,7 +28,7 @@ public struct ServiceID: Hashable, Sendable {
 public final class ProcessManager {
     public private(set) var states: [ServiceID: ServiceState] = [:]
     public private(set) var logs: [ServiceID: [String]] = [:]
-    public var onChange: (() -> Void)?
+    public var onChange: (@MainActor () -> Void)?
 
     public static let maxLogLines = 5000
     private let killTimeout: TimeInterval
