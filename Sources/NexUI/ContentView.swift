@@ -26,6 +26,10 @@ private struct RootContent: View {
                 .background(theme.canvas)
         }
         .toolbar(.hidden, for: .windowToolbar)
+        .overlay {
+            if model.showOnboarding { OnboardingView(model: model).transition(.opacity) }
+        }
+        .animation(.easeInOut(duration: 0.3), value: model.showOnboarding)
         .sheet(item: $model.sheet) { sheet in
             switch sheet {
             case .addProject(let mode): AddProjectSheet(model: model, initialMode: mode)

@@ -249,7 +249,7 @@ private struct AppearanceSection: View {
     }
 }
 
-private struct ThemeSwatchCard: View {
+struct ThemeSwatchCard: View {
     @Environment(\.theme) private var theme
     let id: ThemeID
     let selected: Bool
@@ -349,6 +349,13 @@ private struct GeneralSection: View {
                     Text(model.settings.settings.scanRoot.path).lineLimit(1).truncationMode(.middle).foregroundStyle(theme.fg2)
                     Spacer()
                     Pill("Choose…", style: .quiet) { chooseFolder() }
+                }
+            }
+            SettingsCard("Welcome") {
+                HStack {
+                    Text("Replay the first-launch walkthrough.").foregroundStyle(theme.fg2)
+                    Spacer()
+                    Pill("Show welcome again", style: .quiet) { model.replayOnboarding() }
                 }
             }
             SettingsCard("Widgets") {
