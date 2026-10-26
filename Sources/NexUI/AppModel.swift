@@ -4,6 +4,11 @@ import NexCore
 import NexProcess
 import NexGit
 
+public struct GitBadge: Equatable, Sendable {
+    public var changes = 0, ahead = 0, behind = 0, repoCount = 0
+    public var isClean: Bool { changes == 0 && ahead == 0 && behind == 0 }
+}
+
 public enum ProjectFilter: String, CaseIterable, Identifiable, Sendable {
     case all = "All Projects", fullStack = "Full-stack", running = "Running", flutter = "Flutter"
     public var id: String { rawValue }
@@ -23,6 +28,7 @@ public final class AppModel {
     public private(set) var isScanning = false
     public var searchText = ""
     public var filter: ProjectFilter = .all
+    public private(set) var gitBadges: [String: GitBadge] = [:]
     public var pendingInstall: PendingInstall?
     /// Test seam: replaces `npm install`.
     var installCommandOverride: String?
@@ -72,6 +78,25 @@ public final class AppModel {
         let root = settings.settings.scanRoot
         let scanner = ProjectScanner(overrides: overrides)
         projects = await Task.detached { scanner.scan(root: root) }.value
+        Task { await refreshGitBadges() }
+    }
+
+    /// Summarises each project's repositories (change count, ahead/behind) for the card badges.
+    public func refreshGitBadges() async {
+        var badges: [String: GitBadge] = [:]
+        for project in projects {
+            let repos = git.findRepos(under: project.root)
+            guard !repos.isEmpty else { continue }
+            var badge = GitBadge(repoCount: repos.count)
+            for repo in repos {
+                guard let s = try? await git.status(repo) else { continue }
+                badge.changes += s.changes.count
+                badge.ahead += s.ahead
+                badge.behind += s.behind
+            }
+            badges[project.id] = badge
+        }
+        gitBadges = badges
     }
 }
 

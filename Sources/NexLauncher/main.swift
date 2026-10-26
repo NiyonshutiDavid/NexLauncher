@@ -1,2 +1,0 @@
-import NexUI
-print("NexLauncher")

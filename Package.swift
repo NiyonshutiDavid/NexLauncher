@@ -11,10 +11,11 @@ let package = Package(
         .target(name: "NexGit", dependencies: ["NexCore"]),
         .target(name: "NexUI", dependencies: ["NexCore", "NexProcess", "NexGit"]),
         .executableTarget(name: "NexLauncher", dependencies: ["NexUI"]),
+        .target(name: "NexTestSupport", dependencies: ["NexGit"], path: "Tests/NexTestSupport"),
         .testTarget(name: "NexCoreTests", dependencies: ["NexCore"]),
         .testTarget(name: "NexProcessTests", dependencies: ["NexProcess", "NexCore"]),
-        .testTarget(name: "NexGitTests", dependencies: ["NexGit"]),
-        .testTarget(name: "NexUITests", dependencies: ["NexUI", "NexCore", "NexProcess", "NexGit"]),
+        .testTarget(name: "NexGitTests", dependencies: ["NexGit", "NexTestSupport"]),
+        .testTarget(name: "NexUITests", dependencies: ["NexUI", "NexCore", "NexProcess", "NexGit", "NexTestSupport"]),
     ],
     swiftLanguageModes: [.v5]
 )

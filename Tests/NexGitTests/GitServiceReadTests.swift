@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 @testable import NexGit
+import NexTestSupport
 
 @Suite struct GitServiceReadTests {
     @Test func statusCleanRepo() async throws {

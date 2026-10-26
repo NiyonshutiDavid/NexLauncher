@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 @testable import NexGit
+import NexTestSupport
 
 @Suite struct GitServiceWriteTests {
     private func seeded() -> (TempRepo, URL) {
