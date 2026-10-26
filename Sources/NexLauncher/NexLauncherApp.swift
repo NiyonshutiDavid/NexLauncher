@@ -9,7 +9,8 @@ struct NexLauncherApp: App {
     private var model: AppModel { delegate.model }
     @Environment(\.openWindow) private var openWindow
 
-    /// Developer option for screenshots: `open NexLauncher.app --args -NexStartPage ai|tasks|flutter|running|pinned|settings`.
+    /// Developer option for screenshots: `open NexLauncher.app --args -NexStartPage ai|tasks|flutter|running|pinned|settings`,
+    /// or `project:<name>` / `project-ai:<name>` (after the scan) for a project page, optionally with its AI panel open.
     private func openStartPage() {
         switch UserDefaults.standard.string(forKey: "NexStartPage") {
         case "ai": model.page = .ai
@@ -18,6 +19,11 @@ struct NexLauncherApp: App {
         case "flutter": model.select(filter: .flutter)
         case "running": model.select(filter: .running)
         case "pinned": model.select(filter: .pinned)
+        case let value? where value.hasPrefix("project"):
+            let name = value.split(separator: ":", maxSplits: 1).last.map(String.init) ?? ""
+            guard let project = model.projects.first(where: { $0.name == name }) else { return }
+            model.page = .project(project.id)
+            if value.hasPrefix("project-ai:") { model.aiPanelProjectID = project.id }
         default: break
         }
     }
@@ -32,6 +38,7 @@ struct NexLauncherApp: App {
                     model.applyDockIconPolicy()
                     openStartPage()
                     await model.refresh()
+                    if UserDefaults.standard.string(forKey: "NexStartPage")?.hasPrefix("project") == true { openStartPage() }
                 }
         }
         .windowStyle(.hiddenTitleBar)

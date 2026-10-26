@@ -110,6 +110,7 @@ extension AppModel {
     /// "Ask AI" on a task: open the AI page with the task filled in.
     public func draftAgentTask(_ task: ProjectTask, project: Project) {
         agentDraft = AgentDraft(projectID: project.id, text: task.notes.isEmpty ? task.title : "\(task.title)\n\n\(task.notes)", taskID: task.id)
-        page = .ai
+        // Inside the project, the assistant opens beside it instead of taking you to another page.
+        if page == .project(project.id) { aiPanelProjectID = project.id } else { page = .ai }
     }
 }

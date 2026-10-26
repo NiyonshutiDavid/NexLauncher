@@ -203,18 +203,30 @@ extension AppModel {
     /// Top-level items for Home: apps and collections as on disk, or a flat filtered list while filtering or searching.
     public var homeItems: [HomeItem] {
         let query = searchText.trimmingCharacters(in: .whitespaces)
-        if filter == .all && query.isEmpty && !showOnlyUncommitted {
-            return tree.map { node in
-                if node.kind == .collection { return .collection(node) }
-                return .project(node.project!)
+        let narrowing = filter != .all || !query.isEmpty || showOnlyUncommitted || filters.narrowsProjects
+        let inCollections = appsInCollections
+        let matching = filteredProjects.filter(passesFilters)
+        switch filters.collections {
+        case .only:
+            return tree.filter { node in
+                node.kind == .collection && (!narrowing || node.apps.contains { app in matching.contains { $0.id == app.id } })
+            }.map { .collection($0) }
+        case .hide:
+            if !narrowing { return tree.filter { $0.kind == .app }.compactMap { $0.project.map(HomeItem.project) } }
+            return matching.filter { !inCollections.contains($0.id) }.map { .project($0) }
+        case .expand:
+            return matching.map { .project($0) }
+        case .show:
+            if !narrowing {
+                return tree.map { node in node.kind == .collection ? .collection(node) : .project(node.project!) }
             }
+            return matching.map { .project($0) }
         }
-        return filteredProjects.map { .project($0) }
     }
 
-    /// A sidebar filter, a search, or the unsaved-changes filter is narrowing what Home shows.
+    /// A sidebar filter, the filter panel, a search, or the unsaved-changes filter is narrowing what Home shows.
     public var isFiltering: Bool {
-        filter != .all || showOnlyUncommitted || !searchText.trimmingCharacters(in: .whitespaces).isEmpty
+        filter != .all || showOnlyUncommitted || filters.isActive || !searchText.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     public var emptyState: EmptyStateKind? {
@@ -280,4 +292,77 @@ extension AppModel {
         settings.settings.defaultBranch = value
         settings.save()
     }
+}
+
+// MARK: - Breadcrumbs
+
+public struct Crumb: Equatable, Sendable {
+    public let title: String
+    /// Where tapping it goes; nil for the current page.
+    public let page: AppPage?
+}
+
+extension AppModel {
+    /// Nodes from the top of the tree down to `id`, inclusive.
+    func nodePath(to id: String) -> [ProjectNode]? {
+        func search(_ nodes: [ProjectNode], _ trail: [ProjectNode]) -> [ProjectNode]? {
+            for n in nodes {
+                if n.id == id { return trail + [n] }
+                if let hit = search(n.children, trail + [n]) { return hit }
+            }
+            return nil
+        }
+        return search(tree, [])
+    }
+
+    private func crumbPage(_ node: ProjectNode) -> AppPage {
+        node.kind == .collection ? .collection(node.id) : .project(node.id)
+    }
+
+    public func breadcrumbs(for page: AppPage) -> [Crumb] {
+        let home = Crumb(title: "Projects", page: .home)
+        switch page {
+        case .project(let id), .collection(let id):
+            guard let path = nodePath(to: id) else { return [home, Crumb(title: project(id: id)?.name ?? "", page: nil)] }
+            return [home] + path.dropLast().map { Crumb(title: $0.name, page: crumbPage($0)) } + [Crumb(title: path.last!.name, page: nil)]
+        case .folder(let folder):
+            // The deepest project or collection containing the folder, then the folders below it.
+            var best: [ProjectNode] = []
+            func walk(_ nodes: [ProjectNode], _ trail: [ProjectNode]) {
+                for n in nodes where folder == n.url.path || folder.hasPrefix(n.url.path + "/") {
+                    if trail.count + 1 > best.count { best = trail + [n] }
+                    walk(n.children, trail + [n])
+                }
+            }
+            walk(tree, [])
+            let base = best.last?.url.path ?? settings.settings.scanRoot.path
+            var crumbs = [home] + best.map { Crumb(title: $0.name, page: crumbPage($0)) }
+            if folder == base {
+                if !crumbs.isEmpty, crumbs.count > 1 { crumbs[crumbs.count - 1] = Crumb(title: crumbs.last!.title, page: nil) }
+                return crumbs
+            }
+            let rest = folder.dropFirst(base.count).split(separator: "/").map(String.init)
+            var current = base
+            for (i, part) in rest.enumerated() {
+                current += "/" + part
+                crumbs.append(Crumb(title: part, page: i == rest.count - 1 ? nil : .folder(current)))
+            }
+            return crumbs
+        default:
+            return []
+        }
+    }
+
+    /// Back on a project, collection or folder page: one level up the breadcrumb, Home at the top.
+    public func goBack() {
+        page = breadcrumbs(for: page).dropLast().last?.page ?? .home
+    }
+
+    // MARK: - AI side panel
+
+    public func toggleAIPanel(for project: Project) {
+        aiPanelProjectID = aiPanelProjectID == project.id ? nil : project.id
+    }
+
+    public func agentRuns(for project: Project) -> [AgentRun] { agentRuns.filter { $0.projectID == project.id } }
 }

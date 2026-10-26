@@ -20,28 +20,53 @@ struct ProjectDetailView: View {
                 Picker("", selection: $model.detailTab) {
                     ForEach(tabs) { Text($0.rawValue).tag($0) }
                 }
-                .pickerStyle(.segmented).labelsHidden().frame(maxWidth: 460)
+                .pickerStyle(.segmented).labelsHidden().frame(minWidth: 0, maxWidth: 460)
 
                 content
             }
-            .padding(32)
+            .padding(aiPanelOpen ? 24 : 32)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .fadingHeader(title: project?.name ?? folder.lastPathComponent) {
-            HeaderBackButton { model.page = .home }
+        .frame(minWidth: 0)
+        .fadingHeader(crumbs: crumbs, onSelect: { model.page = $0 }) {
+            HeaderBackButton { model.goBack() }
         } trailing: {
-            if let project { RunPill(model: model, project: project) }
+            if let project {
+                HeaderCircleButton(symbol: "sparkles", help: aiPanelOpen ? "Hide the AI assistant" : "Ask AI about this project") {
+                    withAnimation(.spring(duration: 0.35)) { model.toggleAIPanel(for: project) }
+                }
+                RunPill(model: model, project: project)
+            }
         }
+        .inspector(isPresented: aiPanelBinding) {
+            if let project {
+                ProjectAIPanel(model: model, project: project)
+                    .inspectorColumnWidth(min: 320, ideal: 380, max: 520)
+            }
+        }
+    }
+
+    private var crumbs: [Crumb] {
+        let trail = model.breadcrumbs(for: model.page)
+        return trail.isEmpty ? [Crumb(title: "Projects", page: .home), Crumb(title: project?.name ?? folder.lastPathComponent, page: nil)] : trail
+    }
+
+    private var aiPanelOpen: Bool { project != nil && model.aiPanelProjectID == project?.id }
+
+    private var aiPanelBinding: Binding<Bool> {
+        Binding(get: { aiPanelOpen }, set: { if !$0 { model.aiPanelProjectID = nil } })
     }
 
     private var header: some View {
         HStack(spacing: 18) {
-            if let project { IconTile(name: project.name, glyph: ProjectGlyph.symbol(for: project), size: 88) }
+            // Smaller tile while the AI panel shares the window, so the page still fits beside it.
+            if let project { IconTile(name: project.name, glyph: ProjectGlyph.symbol(for: project), size: aiPanelOpen ? 64 : 88) }
             else { IconTile(name: folder.lastPathComponent, glyph: "folder.fill", size: 88) }
             VStack(alignment: .leading, spacing: 6) {
                 Text(project?.name ?? folder.lastPathComponent).font(.system(size: 32, weight: .bold, design: .rounded)).foregroundStyle(theme.fg)
+                    .lineLimit(1).minimumScaleFactor(0.6)
                 Text(project.map(ProjectSubtitle.text(for:)) ?? "Folder").font(.title3).foregroundStyle(theme.fg2)
-                HStack(spacing: 10) {
+                FlowLayout(spacing: 10) {
                     if let project {
                         RunPill(model: model, project: project)
                         IconButton(model.isPinned(project) ? "pin.fill" : "pin", help: model.isPinned(project) ? "Unpin" : "Pin to menu bar, Dock and widget") { model.togglePin(project) }
@@ -49,8 +74,8 @@ struct ProjectDetailView: View {
                     IconButton("terminal", help: "Open a terminal here") { model.showTerminal(at: folder, page: model.page) }
                     IconButton("folder", help: "Reveal in Finder") { NSWorkspace.shared.activateFileViewerSelecting([folder]) }
                     if let project {
-                        Pill("Ask AI", style: .quiet, systemImage: "sparkles") {
-                            model.agentDraft = AgentDraft(projectID: project.id, text: "", taskID: nil); model.page = .ai
+                        Pill(aiPanelOpen ? "Hide AI" : "Ask AI", style: .quiet, systemImage: "sparkles") {
+                            withAnimation(.spring(duration: 0.35)) { model.toggleAIPanel(for: project) }
                         }
                     }
                 }

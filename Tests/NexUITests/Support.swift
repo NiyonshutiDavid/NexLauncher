@@ -47,7 +47,7 @@ final class Sandbox {
                         git: GitService(),
                         login: FakeLogin(),
                         notifier: notifier,
-                        appIsActive: { [unowned self] in self.appIsActive },
+                        appIsActive: { [weak self] in self?.appIsActive ?? true },
                         tasksFile: root.appendingPathComponent("tasks.json"),
                         snapshotDirectory: root.appendingPathComponent("shared"))
     }

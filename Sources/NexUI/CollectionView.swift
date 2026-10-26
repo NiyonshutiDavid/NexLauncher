@@ -22,6 +22,6 @@ struct CollectionView: View {
             }
             .padding(32)
         }
-        .fadingHeader(title: node.name) { HeaderBackButton { model.page = .home } }
+        .fadingHeader(crumbs: model.breadcrumbs(for: model.page), onSelect: { model.page = $0 }) { HeaderBackButton { model.goBack() } }
     }
 }

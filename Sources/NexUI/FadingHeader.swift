@@ -16,13 +16,31 @@ extension View {
         @ViewBuilder leading: () -> Leading = { EmptyView() },
         @ViewBuilder trailing: () -> Trailing = { EmptyView() }
     ) -> some View {
-        modifier(FadingHeaderModifier(title: title, leading: leading(), trailing: trailing()))
+        modifier(FadingHeaderModifier(center: HeaderTitle(title: title), leading: leading(), trailing: trailing()))
+    }
+
+    /// The same header with a clickable breadcrumb in the middle instead of a title.
+    func fadingHeader<Leading: View, Trailing: View>(
+        crumbs: [Crumb],
+        onSelect: @escaping (AppPage) -> Void,
+        @ViewBuilder leading: () -> Leading = { EmptyView() },
+        @ViewBuilder trailing: () -> Trailing = { EmptyView() }
+    ) -> some View {
+        modifier(FadingHeaderModifier(center: BreadcrumbBar(crumbs: crumbs, onSelect: onSelect), leading: leading(), trailing: trailing()))
     }
 }
 
-private struct FadingHeaderModifier<Leading: View, Trailing: View>: ViewModifier {
+private struct HeaderTitle: View {
     @Environment(\.theme) private var theme
     let title: String
+    var body: some View {
+        Text(title).font(.headline.weight(.semibold)).foregroundStyle(theme.fg).lineLimit(1).frame(maxWidth: 360)
+    }
+}
+
+private struct FadingHeaderModifier<Center: View, Leading: View, Trailing: View>: ViewModifier {
+    @Environment(\.theme) private var theme
+    let center: Center
     let leading: Leading
     let trailing: Trailing
 
@@ -39,8 +57,7 @@ private struct FadingHeaderModifier<Leading: View, Trailing: View>: ViewModifier
                         .frame(height: HeaderMetrics.height + 34)
                         .frame(maxHeight: .infinity, alignment: .top)
                         .allowsHitTesting(false)
-                    Text(title).font(.headline.weight(.semibold)).foregroundStyle(theme.fg).lineLimit(1)
-                        .frame(maxWidth: 360)
+                    center
                     HStack(spacing: 10) {
                         leading
                         Spacer(minLength: 12)

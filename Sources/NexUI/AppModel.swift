@@ -35,6 +35,10 @@ public final class AppModel {
     public private(set) var isScanning = false
     public var searchText = ""
     public var filter: ProjectFilter = .all
+    /// The filter panel (type, framework, git, running, pinned, collections).
+    public var filters = ProjectFilterSet()
+    /// The project whose AI side panel is open.
+    public var aiPanelProjectID: String?
     public private(set) var gitBadges: [String: GitBadge] = [:]
     public var pendingInstall: PendingInstall?
     /// Drives the Set up sheet (confirm → running → failed); nil once the project is running.

@@ -73,6 +73,9 @@ struct HomeView: View {
                     SectionHeader(model.showOnlyUncommitted ? "Unsaved changes" : model.filter.rawValue,
                                   actionTitle: model.showOnlyUncommitted ? "Show all" : nil,
                                   action: model.showOnlyUncommitted ? { model.showOnlyUncommitted = false } : nil)
+                    if model.filters.isActive {
+                        ActiveFilterBar(model: model).transition(.move(edge: .top).combined(with: .opacity))
+                    }
                     if model.isScanning && model.projects.isEmpty {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 340, maximum: 520), spacing: 20)], spacing: 20) {
                             ForEach(0..<6, id: \.self) { _ in SkeletonCard() }
@@ -101,9 +104,11 @@ struct HomeView: View {
             .padding(32)
             .frame(maxWidth: .infinity, alignment: .leading)
             .animation(.easeInOut(duration: 0.25), value: model.isScanning)
+            .animation(.spring(duration: 0.35), value: model.filters)
         }
         .fadingHeader(title: headerTitle) {
             HeaderViewModeToggle(mode: $model.viewMode)
+            HeaderFilterButton(model: model)
             HeaderCircleButton(symbol: "arrow.clockwise", help: "Scan for projects again") { Task { await model.refresh() } }
         } trailing: {
             HeaderSearchField(text: $model.searchText)
