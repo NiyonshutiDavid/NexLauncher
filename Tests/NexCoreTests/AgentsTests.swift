@@ -5,15 +5,15 @@ import Foundation
 @Suite struct AgentCommandTests {
     @Test func claudeStreamsJSONWithThePermissionModeForEachAutonomyLevel() {
         let edit = AgentCommandBuilder.command(kind: .claude, autonomy: .edit, customTemplate: nil)
-        #expect(edit == #"claude -p "$NEX_TASK" --output-format stream-json --verbose --permission-mode acceptEdits --permission-prompts none"#)
+        #expect(edit == #"claude -p --output-format stream-json --verbose --permission-mode acceptEdits --permission-prompts none -- "$NEX_TASK""#)
         #expect(AgentCommandBuilder.command(kind: .claude, autonomy: .plan, customTemplate: nil)?.contains("--permission-mode plan") == true)
         #expect(AgentCommandBuilder.command(kind: .claude, autonomy: .full, customTemplate: nil)?.contains("--dangerously-skip-permissions") == true)
     }
 
     @Test func codexAndGeminiUseTheirNonInteractiveModes() {
-        #expect(AgentCommandBuilder.command(kind: .codex, autonomy: .edit, customTemplate: nil) == #"codex exec --skip-git-repo-check --full-auto "$NEX_TASK""#)
+        #expect(AgentCommandBuilder.command(kind: .codex, autonomy: .edit, customTemplate: nil) == #"codex exec --skip-git-repo-check --full-auto -- "$NEX_TASK""#)
         #expect(AgentCommandBuilder.command(kind: .codex, autonomy: .plan, customTemplate: nil)?.contains("--sandbox read-only") == true)
-        #expect(AgentCommandBuilder.command(kind: .gemini, autonomy: .edit, customTemplate: nil) == #"gemini --approval-mode auto_edit -p "$NEX_TASK""#)
+        #expect(AgentCommandBuilder.command(kind: .gemini, autonomy: .edit, customTemplate: nil) == #"gemini --approval-mode auto_edit --prompt="$NEX_TASK""#)
         #expect(AgentCommandBuilder.command(kind: .gemini, autonomy: .full, customTemplate: nil)?.contains("--yolo") == true)
     }
 
@@ -28,8 +28,8 @@ import Foundation
     }
 
     @Test func interactiveCommandsQuoteTheTaskSafely() {
-        #expect(AgentCommandBuilder.interactiveCommand(kind: .claude, task: "fix it's bug") == #"claude 'fix it'\''s bug'"#)
-        #expect(AgentCommandBuilder.interactiveCommand(kind: .codex, task: "a") == "codex 'a'")
+        #expect(AgentCommandBuilder.interactiveCommand(kind: .claude, task: "fix it's bug") == #"claude -- 'fix it'\''s bug'"#)
+        #expect(AgentCommandBuilder.interactiveCommand(kind: .codex, task: "a") == "codex -- 'a'")
         #expect(AgentCommandBuilder.interactiveCommand(kind: .antigravity, task: "a") == nil)
     }
 }
@@ -65,5 +65,38 @@ import Foundation
         let json = #"{"displayName":"D","scanRoot":"file:///tmp/","showDockIcon":true,"pinnedProjectIDs":[]}"#
         let s = try JSONDecoder().decode(AppSettings.self, from: Data(json.utf8))
         #expect(s.defaultAgent == .claude && s.agentAutonomy == .edit && s.customAgentCommand.isEmpty && s.notifyAgents)
+    }
+}
+
+@Suite struct AgentDashTaskTests {
+    @Test func tasksStartingWithADashAreNotReadAsFlags() {
+        #expect(AgentCommandBuilder.command(kind: .claude, autonomy: .edit, customTemplate: nil)?.hasSuffix(#"-- "$NEX_TASK""#) == true)
+        #expect(AgentCommandBuilder.command(kind: .codex, autonomy: .edit, customTemplate: nil)?.hasSuffix(#"-- "$NEX_TASK""#) == true)
+        #expect(AgentCommandBuilder.command(kind: .gemini, autonomy: .edit, customTemplate: nil)?.contains(#"--prompt="$NEX_TASK""#) == true)
+        #expect(AgentCommandBuilder.interactiveCommand(kind: .claude, task: "- fix") == "claude -- '- fix'")
+    }
+
+    @Test func quickPanelShortcutSettingDefaultsOn() throws {
+        let json = #"{"displayName":"D","scanRoot":"file:///tmp/","showDockIcon":true,"pinnedProjectIDs":[]}"#
+        #expect(try JSONDecoder().decode(AppSettings.self, from: Data(json.utf8)).quickPanelShortcutEnabled)
+    }
+}
+
+@Suite struct AgentConversationTests {
+    @Test func claudeFollowUpsResumeTheSession() {
+        let cmd = AgentCommandBuilder.command(kind: .claude, autonomy: .edit, customTemplate: nil, resumeSessionID: "abc-123")
+        #expect(cmd?.contains("--resume 'abc-123'") == true)
+        #expect(cmd?.hasSuffix(#"-- "$NEX_TASK""#) == true)
+    }
+
+    @Test func sessionIDIsReadFromStreamLines() {
+        #expect(ClaudeStreamParser.sessionID(from: #"{"type":"system","subtype":"init","session_id":"s-1"}"#) == "s-1")
+        #expect(ClaudeStreamParser.sessionID(from: #"{"type":"result","session_id":"s-2","result":"ok"}"#) == "s-2")
+        #expect(ClaudeStreamParser.sessionID(from: "plain") == nil)
+    }
+
+    @Test func followUpsForOtherAgentsCarryTheEarlierExchange() {
+        let text = AgentCommandBuilder.followUpTask(previousTask: "Add a footer", previousAnswer: "Added Footer.tsx", message: "Make it sticky")
+        #expect(text.contains("Add a footer") && text.contains("Added Footer.tsx") && text.hasSuffix("Make it sticky"))
     }
 }

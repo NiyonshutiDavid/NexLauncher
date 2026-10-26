@@ -78,3 +78,25 @@ import NexCore
         await m.stopAllServices()
     }
 }
+
+@MainActor
+@Suite(.serialized) struct SetupConcurrencyTests {
+    @Test func aSecondSetupWaitsUntilTheFirstFinishes() async {
+        let sb = Sandbox(); defer { _ = sb }
+        sb.write("A/package.json", #"{"scripts":{"dev":"sleep 30"},"devDependencies":{"vite":"5"}}"#)
+        sb.write("B/package.json", #"{"scripts":{"dev":"sleep 30"},"devDependencies":{"vite":"5"}}"#)
+        let m = sb.makeModel(); m.reloadWidgets = {}
+        await m.refresh()
+        let a = m.projects.first { $0.name == "A" }!, b = m.projects.first { $0.name == "B" }!
+        m.installCommandOverride = "sleep 1; mkdir -p node_modules"
+        await m.run(a, kinds: [.frontend])
+        let first = Task { await m.confirmInstall() }
+        let end = Date().addingTimeInterval(5)
+        while m.setup?.phase != .running && Date() < end { try? await Task.sleep(for: .milliseconds(20)) }
+        await m.run(b, kinds: [.frontend])                 // refused while A is installing
+        #expect(m.setup?.project.id == a.id)
+        #expect(m.statusMessage?.text.contains("A") == true)
+        await first.value
+        await m.stopAllServices()
+    }
+}

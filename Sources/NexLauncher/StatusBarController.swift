@@ -28,7 +28,18 @@ final class StatusBarController: NSObject, NSPopoverDelegate {
         popover.delegate = self
         popover.contentViewController = NSHostingController(rootView: panelContent())
         observeTitle()
-        hotKey = HotKey(keyCode: UInt32(kVK_ANSI_L), modifiers: UInt32(cmdKey | optionKey)) { [weak self] in self?.togglePanel() }
+        model.applyQuickPanelShortcut = { [weak self] on in self?.setShortcut(on) ?? false }
+        _ = setShortcut(model.settings.settings.quickPanelShortcutEnabled)
+    }
+
+    /// ⌃⌥⌘L: rarely bound by other apps (⌥⌘L is Finder's and Safari's Downloads). Returns false if taken.
+    @discardableResult
+    func setShortcut(_ on: Bool) -> Bool {
+        hotKey = nil
+        guard on else { return true }
+        let key = HotKey(keyCode: UInt32(kVK_ANSI_L), modifiers: UInt32(cmdKey | optionKey | controlKey)) { [weak self] in self?.togglePanel() }
+        hotKey = key.isRegistered ? key : nil
+        return key.isRegistered
     }
 
     private func panelContent() -> some View {
@@ -111,6 +122,7 @@ final class HotKey {
     private static var actions: [UInt32: () -> Void] = [:]
     private static var nextID: UInt32 = 1
     private let id: UInt32
+    private(set) var isRegistered = false
 
     init(keyCode: UInt32, modifiers: UInt32, action: @escaping () -> Void) {
         id = HotKey.nextID
@@ -125,7 +137,8 @@ final class HotKey {
             DispatchQueue.main.async { HotKey.actions[id]?() }
             return noErr
         }, 1, &spec, nil, &handler)
-        RegisterEventHotKey(keyCode, modifiers, EventHotKeyID(signature: OSType(0x4E584C48), id: id), GetApplicationEventTarget(), 0, &ref)
+        let status = RegisterEventHotKey(keyCode, modifiers, EventHotKeyID(signature: OSType(0x4E584C48), id: id), GetApplicationEventTarget(), 0, &ref)
+        isRegistered = status == noErr && ref != nil
     }
 
     deinit {

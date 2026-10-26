@@ -24,7 +24,7 @@ struct HomeView: View {
             case .pinned:
                 let n = model.pinnedProjects.count
                 HeroBanner(eyebrow: "Pinned", title: n == 0 ? "Keep favourites close" : "\(n) pinned project\(n == 1 ? "" : "s")",
-                           subtitle: "Pinned projects appear in the menu bar panel (⌥⌘L), the Dock menu and the Quick Launch widget.",
+                           subtitle: "Pinned projects appear in the menu bar panel (\(AppModel.quickPanelShortcutLabel)), the Dock menu and the Quick Launch widget.",
                            illustration: .pin,
                            actions: n == 0 ? [HeroAction(title: "Browse projects", systemImage: "square.grid.2x2") { model.select(filter: .all) }]
                                            : [HeroAction(title: "Add the widget", systemImage: "rectangle.3.group", style: .quiet) { model.sheet = .widgetsHowTo }])

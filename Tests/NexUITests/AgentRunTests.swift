@@ -86,3 +86,41 @@ import NexCore
         #expect(!catalog.status(.antigravity).installed)
     }
 }
+
+@MainActor
+@Suite(.serialized) struct AgentQuitTests {
+    @Test func stopAllAgentsStopsEveryRunningRun() async {
+        let sb = Sandbox(); defer { _ = sb }
+        sb.write("Site/package.json", Sandbox.vite)
+        let m = sb.makeModel(); m.reloadWidgets = {}
+        m.settings.settings.customAgentCommand = #": "$NEX_TASK"; sleep 30"#
+        await m.refresh()
+        let run = m.startAgent(.custom, task: "x", project: m.projects[0])!
+        #expect(m.runningAgentCount == 1)
+        await m.stopAllAgents()
+        let end = Date().addingTimeInterval(10)
+        while run.status == .running && Date() < end { try? await Task.sleep(for: .milliseconds(25)) }
+        #expect(run.status == .stopped && m.runningAgentCount == 0)
+    }
+}
+
+@MainActor
+@Suite(.serialized) struct AgentConversationModelTests {
+    @Test func replyingToARunStartsAFollowUpWithContext() async {
+        let sb = Sandbox(); defer { _ = sb }
+        sb.write("Site/package.json", Sandbox.vite)
+        let m = sb.makeModel(); m.reloadWidgets = {}
+        m.settings.settings.customAgentCommand = #"printf 'GOT[%s]\n' "$NEX_TASK""#
+        await m.refresh()
+        let first = m.startAgent(.custom, task: "Add a footer", project: m.projects[0])!
+        let end = Date().addingTimeInterval(10)
+        while first.status == .running && Date() < end { try? await Task.sleep(for: .milliseconds(25)) }
+        let reply = m.continueAgent(first, message: "Make it sticky")
+        #expect(reply != nil && reply?.parentID == first.id)
+        let end2 = Date().addingTimeInterval(10)
+        while reply?.status == .running && Date() < end2 { try? await Task.sleep(for: .milliseconds(25)) }
+        let output = reply!.events.compactMap { if case .text(let t) = $0 { return t } else { return nil } }.joined(separator: "\n")
+        #expect(output.contains("Add a footer") && output.contains("Make it sticky"))
+        #expect(m.agentRuns.first?.id == reply?.id)
+    }
+}

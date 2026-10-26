@@ -74,7 +74,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        statusBar = StatusBarController(model: model)        // menu bar item + ⌥⌘L quick panel
+        statusBar = StatusBarController(model: model)        // menu bar item + ⌃⌥⌘L quick panel
         Task { await model.refreshNotificationStatus() }
     }
 
@@ -114,7 +114,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             }
         }
         menu.addItem(.separator())
-        let quick = NSMenuItem(title: "Quick Panel (⌥⌘L)", action: #selector(showQuickPanel), keyEquivalent: "")
+        let quick = NSMenuItem(title: "Quick Panel (\(AppModel.quickPanelShortcutLabel))", action: #selector(showQuickPanel), keyEquivalent: "")
         quick.target = self
         menu.addItem(quick)
         return menu
@@ -130,7 +130,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         let services = model.processes.runningCount
         let terminalBusy = model.terminals.anyForegroundProgram
-        guard services > 0 || terminalBusy else {
+        let agents = model.runningAgentCount
+        guard services > 0 || terminalBusy || agents > 0 else {
             model.terminals.closeAll()
             return .terminateNow
         }
@@ -138,6 +139,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         var parts: [String] = []
         if services > 0 { parts.append("\(services) service\(services == 1 ? "" : "s") still running") }
         if terminalBusy { parts.append("a program is still running in a terminal") }
+        if agents > 0 { parts.append("\(agents) AI agent\(agents == 1 ? " is" : "s are") still working") }
         alert.messageText = parts.joined(separator: " and ").prefix(1).uppercased() + parts.joined(separator: " and ").dropFirst()
         alert.informativeText = "Quit and stop everything, or keep running from the menu bar."
         alert.addButton(withTitle: "Stop and Quit")
@@ -147,6 +149,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         case .alertFirstButtonReturn:
             Task {
                 await model.stopAllServices()
+                await model.stopAllAgents()                  // never leave an agent editing files unsupervised
                 model.terminals.closeAll()
                 sender.reply(toApplicationShouldTerminate: true)
             }

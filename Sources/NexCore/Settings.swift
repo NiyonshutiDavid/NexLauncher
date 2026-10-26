@@ -43,6 +43,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var defaultAgent: AgentKind = .claude
     public var agentAutonomy: AgentAutonomy = .edit
     public var customAgentCommand: String = ""
+    public var quickPanelShortcutEnabled: Bool = true
 
     public init(displayName: String, scanRoot: URL, showDockIcon: Bool, pinnedProjectIDs: [String]) {
         self.displayName = displayName
@@ -80,6 +81,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         defaultAgent = value(.defaultAgent) ?? .claude
         agentAutonomy = value(.agentAutonomy) ?? .edit
         customAgentCommand = value(.customAgentCommand) ?? ""
+        quickPanelShortcutEnabled = value(.quickPanelShortcutEnabled) ?? true
     }
 
     enum Keys: String, CodingKey {
@@ -87,7 +89,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         case appearance, theme, viewMode, dismissedCTAs, avatarColorHex, avatarPhotoPath, lastRun
         case defaultBranch, defaultPullStrategy, widgetsConfirmed
         case onboardingCompleted, notificationsEnabled, notifyReady, notifyCrash, notifyAdded, notifyOnlyInBackground
-        case notifyAgents, defaultAgent, agentAutonomy, customAgentCommand
+        case notifyAgents, defaultAgent, agentAutonomy, customAgentCommand, quickPanelShortcutEnabled
     }
 
     public static func initials(from name: String) -> String {

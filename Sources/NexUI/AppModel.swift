@@ -64,6 +64,9 @@ public final class AppModel {
     public let notifier: Notifying
     /// Set by the app so any part of it (menu bar, Dock menu, notifications) can bring the main window back.
     public var openMainWindowAction: (() -> Void)?
+    /// Set by the app: turns the quick-panel shortcut on or off; returns whether it registered.
+    public var applyQuickPanelShortcut: ((Bool) -> Bool)?
+    public static let quickPanelShortcutLabel = "⌃⌥⌘L"
     let appIsActive: () -> Bool
     var lastServiceStates: [ServiceID: ServiceState] = [:]
     public internal(set) var notificationStatus: NotificationAuthorization = .notDetermined

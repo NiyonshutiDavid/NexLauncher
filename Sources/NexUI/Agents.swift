@@ -17,6 +17,10 @@ public final class AgentRun: Identifiable {
     public let task: String
     public let autonomy: AgentAutonomy
     public let linkedTaskID: UUID?
+    /// The run this one replies to (a follow-up in the same conversation).
+    public let parentID: UUID?
+    /// Claude Code's session id, used to resume the conversation.
+    public internal(set) var sessionID: String?
     public let startedAt = Date()
     public internal(set) var status: Status = .running
     public internal(set) var events: [AgentEvent] = []
@@ -27,7 +31,9 @@ public final class AgentRun: Identifiable {
     var stopRequested = false
     var reportedSuccess: Bool?
 
-    init(agent: AgentKind, project: Project, task: String, autonomy: AgentAutonomy, linkedTaskID: UUID?) {
+    init(agent: AgentKind, project: Project, task: String, autonomy: AgentAutonomy, linkedTaskID: UUID?, parentID: UUID? = nil, sessionID: String? = nil) {
+        self.parentID = parentID
+        self.sessionID = sessionID
         self.agent = agent
         projectID = project.id
         projectName = project.name
@@ -41,6 +47,7 @@ public final class AgentRun: Identifiable {
 
     func append(_ lines: [String]) {
         for line in lines {
+            if agent == .claude, let id = ClaudeStreamParser.sessionID(from: line) { sessionID = id }
             let parsed = agent == .claude ? ClaudeStreamParser.events(from: line)
                 : (line.trimmingCharacters(in: .whitespaces).isEmpty ? [] : [AgentEvent.text(PortParser.stripANSI(line))])
             for event in parsed {
@@ -49,6 +56,12 @@ public final class AgentRun: Identifiable {
             }
         }
         if events.count > 3000 { events.removeFirst(events.count - 3000) }
+    }
+
+    /// What the agent said last: its final result, or its latest message.
+    public var answer: String? {
+        if let summary, !summary.isEmpty { return summary }
+        return lastText
     }
 
     var lastText: String? {

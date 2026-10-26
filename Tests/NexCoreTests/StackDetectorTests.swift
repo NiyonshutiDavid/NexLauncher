@@ -112,8 +112,8 @@ import Foundation
 
     @Test func goWebFrameworkIsABackendAndPlainGoIsAnApp() {
         let t = TempTree()
-        t.write("web/go.mod", "module x\nrequire github.com/gin-gonic/gin v1.9.0\n")
-        t.write("cli/go.mod", "module y\n")
+        t.write("web/go.mod", "module x\nrequire github.com/gin-gonic/gin v1.9.0\n"); t.write("web/main.go", "package main\n")
+        t.write("cli/go.mod", "module y\n"); t.write("cli/main.go", "package main\n")
         #expect(one(t, "web")?.kind == .backend && one(t, "web")?.framework == "Go · Gin")
         #expect(one(t, "cli")?.kind == .app && one(t, "cli")?.run == "go run .")
     }
@@ -207,7 +207,7 @@ import Foundation
 
     @Test func stacksWithoutAnInstallStepNeverAsk() {
         let t = TempTree()
-        t.write("cli/go.mod", "module y\n")
+        t.write("cli/go.mod", "module y\n"); t.write("cli/main.go", "package main\n")
         let target = ProjectScanner().scan(root: t.root)[0].targets[0]
         #expect(!CommandBuilder.needsInstall(target))
     }
@@ -233,5 +233,59 @@ import Foundation
         let t = TempTree()
         t.write("landing/index.html", "<html></html>")
         #expect(ProjectScanner().scan(root: t.root)[0].targets.map(\.framework) == ["Static site"])
+    }
+}
+
+@Suite struct ReviewFixStackTests {
+    @Test func pnpmWorkspaceUsesTheRootLockfileAndInstallsAtTheRoot() {
+        let t = TempTree()
+        t.write("mono/pnpm-lock.yaml", ""); t.write("mono/pnpm-workspace.yaml", "packages: ['apps/*']")
+        t.write("mono/apps/web/package.json", TempTree.viteApp)
+        let s = StackDetector.detect(in: t.root.appendingPathComponent("mono/apps/web")).first
+        #expect(s?.run == "pnpm run dev")
+        #expect(s?.install == "cd \(CommandBuilder.quote(t.root.appendingPathComponent("mono").path)) && pnpm install")
+        #expect(s?.installMarker == "../../node_modules")
+    }
+
+    @Test func npmWorkspaceIsInstalledOnceAtTheRoot() {
+        let t = TempTree()
+        t.write("mono/package.json", #"{"private":true,"workspaces":["apps/*"]}"#); t.write("mono/package-lock.json", "")
+        t.write("mono/apps/web/package.json", TempTree.viteApp)
+        t.mkdir("mono/node_modules")
+        let target = ServiceTarget(kind: .frontend, directory: t.root.appendingPathComponent("mono/apps/web"), framework: "Vite", command: "")
+        #expect(!CommandBuilder.needsInstall(target))
+    }
+
+    @Test func standaloneAppStillUsesItsOwnFolder() {
+        let t = TempTree()
+        t.write("site/package.json", TempTree.viteApp)
+        let s = StackDetector.detect(in: t.root.appendingPathComponent("site")).first
+        #expect(s?.install == "npm install" && s?.installMarker == "node_modules")
+    }
+
+    @Test func goCmdLayoutRunsTheOnlyCommand() {
+        let t = TempTree()
+        t.write("svc/go.mod", "module x\n"); t.write("svc/cmd/server/main.go", "package main\nfunc main(){}\n")
+        #expect(StackDetector.detect(in: t.root.appendingPathComponent("svc")).first?.run == "go run ./cmd/server")
+    }
+
+    @Test func goMainAtTheRootRunsDot() {
+        let t = TempTree()
+        t.write("cli/go.mod", "module y\n"); t.write("cli/main.go", "package main\nfunc main(){}\n")
+        #expect(StackDetector.detect(in: t.root.appendingPathComponent("cli")).first?.run == "go run .")
+    }
+
+    @Test func goLibraryWithoutMainIsNotRunnable() {
+        let t = TempTree()
+        t.write("lib/go.mod", "module z\n"); t.write("lib/util.go", "package util\n")
+        #expect(StackDetector.detect(in: t.root.appendingPathComponent("lib")).isEmpty)
+    }
+
+    @Test func pyprojectOnlyProjectGetsAVirtualEnvironment() {
+        let t = TempTree()
+        t.write("api/pyproject.toml", "[project]\nname='api'\ndependencies=['fastapi','uvicorn']\n"); t.write("api/main.py", "")
+        let s = StackDetector.detect(in: t.root.appendingPathComponent("api")).first
+        #expect(s?.install == "python3 -m venv .venv && .venv/bin/python -m pip install -e .")
+        #expect(s?.installMarker == ".venv")
     }
 }

@@ -74,7 +74,7 @@ public enum AgentEvent: Equatable, Sendable {
 public enum AgentCommandBuilder {
     public static let taskVariable = "NEX_TASK"
 
-    public static func command(kind: AgentKind, autonomy: AgentAutonomy, customTemplate: String?) -> String? {
+    public static func command(kind: AgentKind, autonomy: AgentAutonomy, customTemplate: String?, resumeSessionID: String? = nil) -> String? {
         let task = "\"$\(taskVariable)\""
         switch kind {
         case .claude:
@@ -84,7 +84,9 @@ public enum AgentCommandBuilder {
             case .edit: mode = "--permission-mode acceptEdits --permission-prompts none"
             case .full: mode = "--dangerously-skip-permissions"
             }
-            return "claude -p \(task) --output-format stream-json --verbose \(mode)"
+            let resume = resumeSessionID.map { " --resume \(CommandBuilder.quote($0))" } ?? ""
+            // `--` ends the options, so a task that starts with "-" (a bullet list) isn't read as a flag.
+            return "claude -p --output-format stream-json --verbose \(mode)\(resume) -- \(task)"
         case .codex:
             let mode: String
             switch autonomy {
@@ -92,12 +94,12 @@ public enum AgentCommandBuilder {
             case .edit: mode = "--full-auto"
             case .full: mode = "--dangerously-bypass-approvals-and-sandbox"
             }
-            return "codex exec --skip-git-repo-check \(mode) \(task)"
+            return "codex exec --skip-git-repo-check \(mode) -- \(task)"
         case .gemini:
             switch autonomy {
-            case .plan: return "gemini -p \(task)"
-            case .edit: return "gemini --approval-mode auto_edit -p \(task)"
-            case .full: return "gemini --yolo -p \(task)"
+            case .plan: return "gemini --prompt=\(task)"
+            case .edit: return "gemini --approval-mode auto_edit --prompt=\(task)"
+            case .full: return "gemini --yolo --prompt=\(task)"
             }
         case .antigravity:
             return nil                       // no command-line runner: the app opens instead
@@ -108,10 +110,18 @@ public enum AgentCommandBuilder {
         }
     }
 
+    /// A follow-up for agents that can't resume a session: the earlier exchange travels with the new message.
+    public static func followUpTask(previousTask: String, previousAnswer: String, message: String) -> String {
+        var parts = ["Earlier in this project you were asked:", previousTask]
+        if !previousAnswer.isEmpty { parts += ["You answered:", previousAnswer] }
+        parts += ["Follow-up:", message]
+        return parts.joined(separator: "\n\n")
+    }
+
     /// For running the agent interactively in a terminal tab (the task is shell-quoted).
     public static func interactiveCommand(kind: AgentKind, task: String) -> String? {
         guard let binary = kind.binary else { return nil }
-        return "\(binary) \(CommandBuilder.quote(task))"
+        return "\(binary) -- \(CommandBuilder.quote(task))"
     }
 }
 
@@ -146,6 +156,13 @@ public enum ClaudeStreamParser {
         default:
             return []
         }
+    }
+
+    /// Claude Code reports its session id on the init and result lines; follow-ups resume it.
+    public static func sessionID(from line: String) -> String? {
+        guard let data = line.trimmingCharacters(in: .whitespaces).data(using: .utf8),
+              let obj = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return nil }
+        return obj["session_id"] as? String
     }
 
     private static func detail(_ input: [String: Any]) -> String {

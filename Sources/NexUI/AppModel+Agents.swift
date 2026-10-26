@@ -7,16 +7,18 @@ extension AppModel {
     /// Starts an agent on `task` inside the project. Returns nil (with `agentError` set) if it can't start.
     @discardableResult
     public func startAgent(_ kind: AgentKind, task: String, project: Project, linkedTask: ProjectTask? = nil,
-                           autonomy: AgentAutonomy? = nil) -> AgentRun? {
+                           autonomy: AgentAutonomy? = nil, replyingTo parent: AgentRun? = nil) -> AgentRun? {
         let text = task.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { agentError = "Describe the task first."; return nil }
         if kind == .antigravity { openInAntigravity(project: project, task: text); return nil }
         let level = autonomy ?? settings.settings.agentAutonomy
-        guard let command = AgentCommandBuilder.command(kind: kind, autonomy: level, customTemplate: settings.settings.customAgentCommand) else {
+        guard let command = AgentCommandBuilder.command(kind: kind, autonomy: level, customTemplate: settings.settings.customAgentCommand,
+                                                        resumeSessionID: parent?.sessionID) else {
             agentError = "Set the custom agent's command in Settings → AI first."
             return nil
         }
-        let run = AgentRun(agent: kind, project: project, task: text, autonomy: level, linkedTaskID: linkedTask?.id)
+        let run = AgentRun(agent: kind, project: project, task: text, autonomy: level, linkedTaskID: linkedTask?.id,
+                           parentID: parent?.id, sessionID: parent?.sessionID)
         do {
             let (pid, fd) = try ProcessSpawner.spawn(command: command, directory: project.root,
                                                      environment: [AgentCommandBuilder.taskVariable: text, "NO_COLOR": "1", "TERM": "dumb"])
@@ -31,6 +33,24 @@ extension AppModel {
         agentError = nil
         agentRuns.insert(run, at: 0)
         return run
+    }
+
+    /// Replies to a finished run, continuing the same conversation: Claude Code resumes its session; other
+    /// agents get the earlier exchange together with the new message.
+    @discardableResult
+    public func continueAgent(_ run: AgentRun, message: String) -> AgentRun? {
+        let text = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty, !run.isRunning, let project = project(id: run.projectID) else { return nil }
+        let task = run.agent == .claude && run.sessionID != nil
+            ? text
+            : AgentCommandBuilder.followUpTask(previousTask: run.task, previousAnswer: run.answer ?? "", message: text)
+        return startAgent(run.agent, task: task, project: project, autonomy: run.autonomy, replyingTo: run)
+    }
+
+    public var runningAgentCount: Int { agentRuns.filter(\.isRunning).count }
+
+    public func stopAllAgents() async {
+        for run in agentRuns where run.isRunning { await stopAgent(run) }
     }
 
     public func stopAgent(_ run: AgentRun) async {

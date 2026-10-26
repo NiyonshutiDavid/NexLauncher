@@ -55,6 +55,10 @@ extension AppModel {
     public func run(_ project: Project, kinds: Set<ServiceKind>, flutterDevice: String? = nil) async {
         let targets = project.targets.filter { kinds.contains($0.kind) }
         if targets.contains(where: CommandBuilder.needsInstall) {
+            if let busy = setup, busy.phase == .running, busy.id != project.id {
+                statusMessage = StatusMessage(text: "Finish setting up \(busy.project.name) first.", isError: true)
+                return
+            }
             pendingInstall = PendingInstall(project: project, kinds: kinds, flutterDevice: flutterDevice)
             setup = SetupSession(project: project, steps: targets.filter(CommandBuilder.needsInstall).map { target in
                 let body = CommandBuilder.installBody(for: target)
@@ -98,7 +102,7 @@ extension AppModel {
         // Setup can change how a project runs (e.g. a new .venv), so rescan before starting it.
         await refresh()
         let fresh = project(id: pending.project.id) ?? pending.project
-        setup = nil
+        if setup?.id == pending.project.id { setup = nil }
         await run(fresh, kinds: pending.kinds, flutterDevice: pending.flutterDevice)
     }
 

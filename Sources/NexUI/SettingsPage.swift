@@ -413,11 +413,17 @@ private struct GeneralSection: View {
                     Pill("Choose…", style: .quiet) { chooseFolder() }
                 }
             }
-            SettingsCard("Menu bar", footer: "macOS hides menu bar icons when the bar is full (common with a notch). The shortcut always works.") {
-                HStack {
-                    Image(systemName: "bolt.horizontal.circle.fill").foregroundStyle(theme.accent)
-                    Text("Open the quick panel from anywhere with ⌥⌘L").foregroundStyle(theme.fg)
-                }
+            SettingsCard("Menu bar", footer: "macOS hides menu bar icons when the bar is full (common with a notch). The shortcut opens the same panel anyway.") {
+                Toggle("Open the quick panel from anywhere with \(AppModel.quickPanelShortcutLabel)", isOn: Binding(
+                    get: { model.settings.settings.quickPanelShortcutEnabled },
+                    set: { on in
+                        model.settings.settings.quickPanelShortcutEnabled = on
+                        model.settings.save()
+                        if on, model.applyQuickPanelShortcut?(true) == false {
+                            model.statusMessage = StatusMessage(text: "Another app already uses \(AppModel.quickPanelShortcutLabel).", isError: true)
+                        } else { _ = model.applyQuickPanelShortcut?(on) }
+                    }))
+                if let message = model.statusMessage, message.isError { Text(message.text).font(.caption).foregroundStyle(.red) }
             }
             SettingsCard("Welcome") {
                 HStack {
