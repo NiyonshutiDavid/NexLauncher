@@ -48,7 +48,16 @@ codesign --verify --deep --strict "$APP" && echo "Signature OK"
 
 if [[ "${1:-}" == "--install" ]]; then
     echo "==> Installing to /Applications"
-    pkill -x NexLauncher 2>/dev/null || true
+    # Don't kill a running copy that has services, agents or terminals under it (they'd be cut off).
+    if PID=$(pgrep -x NexLauncher); then
+        if [[ -n "$(pgrep -P $PID)" && "${FORCE:-0}" != "1" ]]; then
+            echo "NexLauncher has running services, agents or terminal tabs. Quit it first (or FORCE=1 ./build.sh --install)." >&2
+            exit 1
+        fi
+        osascript -e 'tell application "NexLauncher" to quit' >/dev/null 2>&1 || true
+        sleep 2
+        pkill -x NexLauncher 2>/dev/null || true
+    fi
     rm -rf "/Applications/$APP"
     cp -R "$APP" "/Applications/$APP"
     /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "/Applications/$APP"

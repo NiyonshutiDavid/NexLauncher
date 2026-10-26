@@ -28,10 +28,11 @@ private struct RootContent: View {
                 .transition(.opacity.combined(with: .offset(x: 18)))
                 .background(theme.canvas)
                 .animation(.smooth(duration: 0.3), value: pageKey)
-                // WhatsApp-style header: no bar behind the toolbar; content softly fades out beneath it.
-                .scrollEdgeEffectStyle(.soft, for: .top)
-                .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         }
+        // WhatsApp-style header: no bar behind the toolbar; content softly fades out beneath it.
+        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+        .scrollEdgeEffectStyle(.soft, for: .top)
+        .background(WindowStyler())
         .overlay {
             if model.showOnboarding { OnboardingView(model: model).transition(.opacity) }
         }
