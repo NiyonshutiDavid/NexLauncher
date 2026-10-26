@@ -74,7 +74,7 @@ public final class ProcessManager {
         posix_spawn_file_actions_adddup2(&actions, fds[1], 2)
         posix_spawn_file_actions_addclose(&actions, fds[0])
         posix_spawn_file_actions_addclose(&actions, fds[1])
-        posix_spawn_file_actions_addchdir_np(&actions, directory.path)
+        posix_spawn_file_actions_addchdir(&actions, directory.path)
 
         var attrs: posix_spawnattr_t? = nil
         posix_spawnattr_init(&attrs)
@@ -108,7 +108,7 @@ public final class ProcessManager {
                     lines.append(String(decoding: buffer[buffer.startIndex..<nl], as: UTF8.self))
                     buffer.removeSubrange(buffer.startIndex...nl)
                 }
-                if !lines.isEmpty { Task { @MainActor in manager.append(lines, to: id) } }
+                if !lines.isEmpty { let batch = lines; Task { @MainActor in manager.append(batch, to: id) } }
             }
             if !buffer.isEmpty { let tail = String(decoding: buffer, as: UTF8.self); Task { @MainActor in manager.append([tail], to: id) } }
             close(readFD)
