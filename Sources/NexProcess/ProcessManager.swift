@@ -13,12 +13,16 @@ public enum ServiceState: Equatable, Sendable {
     }
 }
 
+/// Identifies one runnable service. `directory` keeps two targets of the same kind
+/// (e.g. `web/` and `admin/`, both Vite) apart.
 public struct ServiceID: Hashable, Sendable {
     public let projectID: String
     public let kind: ServiceKind
-    public init(projectID: String, kind: ServiceKind) {
+    public let directory: String
+    public init(projectID: String, kind: ServiceKind, directory: String = "") {
         self.projectID = projectID
         self.kind = kind
+        self.directory = directory
     }
 }
 
@@ -29,11 +33,16 @@ public final class ProcessManager {
     public private(set) var states: [ServiceID: ServiceState] = [:]
     public private(set) var logs: [ServiceID: [String]] = [:]
     public var onChange: (@MainActor () -> Void)?
+    /// How to stop a compose stack; `docker compose up` doesn't stop its containers when killed.
+    public var dockerStopCommand: (URL) -> String = { "cd \(CommandBuilder.quote($0.path)) && docker compose stop" }
 
     public static let maxLogLines = 5000
     private let killTimeout: TimeInterval
     private var pids: [ServiceID: pid_t] = [:]
+    private var directories: [ServiceID: URL] = [:]
+    private var fixedPorts: [ServiceID: Int] = [:]
     private var stopRequested: Set<ServiceID> = []
+    private var userStopped: Set<ServiceID> = []
 
     public init(killTimeout: TimeInterval = 3) {
         self.killTimeout = killTimeout
@@ -41,13 +50,22 @@ public final class ProcessManager {
 
     public var runningCount: Int { states.values.filter(\.isActive).count }
 
+    public func wasUserStopped(_ id: ServiceID) -> Bool { userStopped.contains(id) }
+
+    public static func id(for target: ServiceTarget, projectID: String) -> ServiceID {
+        ServiceID(projectID: projectID, kind: target.kind, directory: target.directory.path)
+    }
+
     // MARK: - Start
 
     public func start(_ target: ServiceTarget, projectID: String) {
-        let id = ServiceID(projectID: projectID, kind: target.kind)
+        let id = Self.id(for: target, projectID: projectID)
         if states[id]?.isActive == true { return }
         logs[id] = []
         stopRequested.remove(id)
+        userStopped.remove(id)
+        directories[id] = target.directory
+        fixedPorts[id] = target.port
 
         var isDir: ObjCBool = false
         guard FileManager.default.fileExists(atPath: target.directory.path, isDirectory: &isDir), isDir.boolValue else {
@@ -70,6 +88,7 @@ public final class ProcessManager {
         var actions: posix_spawn_file_actions_t? = nil
         posix_spawn_file_actions_init(&actions)
         defer { posix_spawn_file_actions_destroy(&actions) }
+        posix_spawn_file_actions_addopen(&actions, 0, "/dev/null", O_RDONLY, 0)
         posix_spawn_file_actions_adddup2(&actions, fds[1], 1)
         posix_spawn_file_actions_adddup2(&actions, fds[1], 2)
         posix_spawn_file_actions_addclose(&actions, fds[0])
@@ -79,7 +98,8 @@ public final class ProcessManager {
         var attrs: posix_spawnattr_t? = nil
         posix_spawnattr_init(&attrs)
         defer { posix_spawnattr_destroy(&attrs) }
-        posix_spawnattr_setflags(&attrs, Int16(POSIX_SPAWN_SETSID))
+        // New session (pgid == pid), and don't leak the app's other descriptors (e.g. git's pipes) into the server.
+        posix_spawnattr_setflags(&attrs, Int16(POSIX_SPAWN_SETSID | POSIX_SPAWN_CLOEXEC_DEFAULT))
 
         let args = ["/bin/zsh", "-lc", command]
         let cArgs = args.map { strdup($0) } + [nil]
@@ -108,9 +128,9 @@ public final class ProcessManager {
                     lines.append(String(decoding: buffer[buffer.startIndex..<nl], as: UTF8.self))
                     buffer.removeSubrange(buffer.startIndex...nl)
                 }
-                if !lines.isEmpty { let batch = lines; Task { @MainActor in manager.append(batch, to: id) } }
+                if !lines.isEmpty { let batch = lines; Task { @MainActor in manager.append(batch, to: id, pid: pid) } }
             }
-            if !buffer.isEmpty { let tail = String(decoding: buffer, as: UTF8.self); Task { @MainActor in manager.append([tail], to: id) } }
+            if !buffer.isEmpty { let tail = String(decoding: buffer, as: UTF8.self); Task { @MainActor in manager.append([tail], to: id, pid: pid) } }
             close(readFD)
         }
         Thread.detachNewThread {
@@ -125,14 +145,17 @@ public final class ProcessManager {
 
     // MARK: - Main-actor callbacks
 
-    private func append(_ lines: [String], to id: ServiceID) {
+    private func append(_ lines: [String], to id: ServiceID, pid: pid_t) {
+        guard pids[id] == pid else { return }          // output from an earlier run of this service
         var current = logs[id] ?? []
         current.append(contentsOf: lines)
         if current.count > Self.maxLogLines { current.removeFirst(current.count - Self.maxLogLines) }
         logs[id] = current
-        guard states[id]?.isActive == true else { return }
-        let port = lines.lazy.compactMap(PortParser.port(in:)).first
-        if let port { set(id, .running(port: port)) } else if states[id] == .starting { set(id, .running(port: nil)) }
+        guard let state = states[id], state.isActive else { return }
+        if let fixed = fixedPorts[id] { set(id, .running(port: fixed)); return }
+        if case .running(let port?) = state { return }  // the first port announced wins
+        if let port = lines.lazy.compactMap(PortParser.port(in:)).first { set(id, .running(port: port)) }
+        else if state == .starting { set(id, .running(port: nil)) }
     }
 
     private func handleExit(_ id: ServiceID, pid: pid_t, code: Int32) {
@@ -158,19 +181,35 @@ public final class ProcessManager {
     public func stop(_ id: ServiceID) async {
         guard let pid = pids[id] else { return }
         stopRequested.insert(id)
+        userStopped.insert(id)
         killpg(pid, SIGTERM)
-        if await waitForExit(id, pid: pid, timeout: killTimeout) { return }
+        if id.kind == .docker, let dir = directories[id] { await runShell(dockerStopCommand(dir), timeout: 60) }
+        // Done only when the leader is reaped AND nothing is left in its group; otherwise escalate.
+        let deadline = Date().addingTimeInterval(killTimeout)
+        while Date() < deadline {
+            if pids[id] != pid && killpg(pid, 0) != 0 { return }
+            try? await Task.sleep(for: .milliseconds(20))
+        }
         killpg(pid, SIGKILL)
-        _ = await waitForExit(id, pid: pid, timeout: 2)
+        let reapDeadline = Date().addingTimeInterval(2)
+        while pids[id] == pid && Date() < reapDeadline { try? await Task.sleep(for: .milliseconds(20)) }
     }
 
     public func stopAll() async {
         for id in Array(pids.keys) { await stop(id) }
     }
 
-    private func waitForExit(_ id: ServiceID, pid: pid_t, timeout: TimeInterval) async -> Bool {
-        let deadline = Date().addingTimeInterval(timeout)
-        while pids[id] == pid && Date() < deadline { try? await Task.sleep(for: .milliseconds(20)) }
-        return pids[id] != pid
+    private func runShell(_ command: String, timeout: TimeInterval) async {
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/bin/zsh")
+            p.arguments = ["-lc", command]
+            p.standardOutput = FileHandle.nullDevice
+            p.standardError = FileHandle.nullDevice
+            p.standardInput = FileHandle.nullDevice
+            p.terminationHandler = { _ in cont.resume() }
+            do { try p.run() } catch { cont.resume(); return }
+            DispatchQueue.global().asyncAfter(deadline: .now() + timeout) { if p.isRunning { p.terminate() } }
+        }
     }
 }

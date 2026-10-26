@@ -72,4 +72,22 @@ import NexCore
         await model.handle(url: URL(string: "https://example.com")!)
         #expect(model.processes.runningCount == 0)
     }
+
+    @Test func urlArrivingBeforeFirstScanIsQueuedNotDropped() async {
+        let sb = Sandbox()
+        defer { _ = sb }
+        sb.write("Site/package.json", Sandbox.vite)
+        try! FileManager.default.createDirectory(at: sb.scanRoot.appendingPathComponent("Site/node_modules"), withIntermediateDirectories: true)
+        let model = sb.makeModel()
+        model.reloadWidgets = {}
+        model.overrides.set(Override(command: "sleep 30"), forPath: OverrideStore.key(directory: sb.scanRoot.appendingPathComponent("Site"), kind: .frontend))
+        let id = String(cString: realpath(sb.scanRoot.appendingPathComponent("Site").path, nil))   // the scanner reports real paths
+        var comps = URLComponents(string: "nexlauncher://run")!
+        comps.queryItems = [URLQueryItem(name: "project", value: id)]
+        await model.handle(url: comps.url!)           // no projects yet
+        #expect(model.processes.runningCount == 0)
+        await model.refresh()
+        #expect(await waitUntil { model.processes.runningCount == 1 })
+        await model.stopAllServices()
+    }
 }

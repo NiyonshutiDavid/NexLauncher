@@ -6,6 +6,11 @@ public enum CommandBuilder {
         "'" + s.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
 
+    /// Quotes only when needed, so common values like `macos` stay readable.
+    static func quoteIfNeeded(_ s: String) -> String {
+        s.range(of: "^[A-Za-z0-9._:@/=+-]+$", options: .regularExpression) != nil ? s : quote(s)
+    }
+
     public static func command(for kind: ServiceKind, at directory: URL, framework: String?, flutterDevice: String?) -> String {
         "cd \(quote(directory.path)) && " + body(for: kind, at: directory, framework: framework, flutterDevice: flutterDevice)
     }
@@ -13,12 +18,13 @@ public enum CommandBuilder {
     private static func body(for kind: ServiceKind, at dir: URL, framework: String?, flutterDevice: String?) -> String {
         switch kind {
         case .flutter:
-            return "flutter run" + (flutterDevice.map { " -d \($0)" } ?? "")
+            return "flutter run" + (flutterDevice.map { " -d \(quoteIfNeeded($0))" } ?? "")
         case .docker:
             return "docker compose up"
         case .frontend, .backend:
             let fm = FileManager.default
-            if fm.fileExists(atPath: dir.appendingPathComponent("package.json").path) {
+            let pythonFrameworks: Set<String> = ["Django", "FastAPI", "Flask"]
+            if !pythonFrameworks.contains(framework ?? ""), fm.fileExists(atPath: dir.appendingPathComponent("package.json").path) {
                 return hasScript("dev", in: dir) ? "npm run dev" : "npm start"
             }
             let python = ["venv", ".venv"].map { "\($0)/bin/python" }

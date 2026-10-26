@@ -85,6 +85,36 @@ import NexProcess
         await model.stop(p)
     }
 
+    @Test func stoppingDuringInstallDoesNotStartTheService() async {
+        let sb = Sandbox()
+        sb.write("Site/package.json", #"{"scripts":{"dev":"sleep 30"},"devDependencies":{"vite":"5"}}"#)
+        let model = sb.makeModel(); await model.refresh()
+        let p = model.projects[0]
+        model.installCommandOverride = "sleep 30"
+        await model.run(p, kinds: [.frontend])
+        let install = Task { await model.confirmInstall() }
+        #expect(await waitUntil { model.processes.runningCount == 1 })
+        await model.stop(p)
+        await install.value
+        try? await Task.sleep(for: .milliseconds(300))
+        #expect(model.processes.runningCount == 0)
+    }
+
+    @Test func twoFrontendsInOneProjectBothStart() async {
+        let sb = Sandbox()
+        for d in ["web", "admin"] {
+            sb.write("Mono/\(d)/package.json", Sandbox.vite)
+            try! FileManager.default.createDirectory(at: sb.scanRoot.appendingPathComponent("Mono/\(d)/node_modules"), withIntermediateDirectories: true)
+        }
+        let model = sb.makeModel(); await model.refresh()
+        let p = model.projects[0]
+        for t in p.targets { model.overrides.set(Override(command: "sleep 30"), forPath: OverrideStore.key(directory: t.directory, kind: t.kind)) }
+        await model.refresh()
+        await model.run(model.projects[0], kinds: [.frontend])
+        #expect(await waitUntil { model.processes.runningCount == 2 })
+        await model.stop(model.projects[0])
+    }
+
     @Test func cancellingInstallStartsNothing() async {
         let (model, project) = await fullStack(Sandbox(), installed: false)
         await model.run(project, kinds: [.frontend])

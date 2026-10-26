@@ -5,7 +5,7 @@ import NexUI
 @main
 struct NexLauncherApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
-    @State private var model = AppModel()
+    private var model: AppModel { delegate.model }
 
     var body: some Scene {
         WindowGroup("NexLauncher", id: "main") {
@@ -13,7 +13,6 @@ struct NexLauncherApp: App {
                 .frame(minWidth: 860, minHeight: 560)
                 .onOpenURL { url in Task { await model.handle(url: url) } }
                 .task {
-                    delegate.model = model
                     model.applyDockIconPolicy()
                     await model.refresh()
                 }
@@ -37,12 +36,13 @@ struct NexLauncherApp: App {
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    var model: AppModel?
+    /// Owned here (not by a window) so Quit can always see running services, even with no window open.
+    let model = AppModel()
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard let model, model.shouldConfirmQuit else { return .terminateNow }
+        guard model.shouldConfirmQuit else { return .terminateNow }
         let alert = NSAlert()
         alert.messageText = "\(model.processes.runningCount) service(s) still running"
         alert.informativeText = "Quit and stop them, or keep them running from the menu bar."

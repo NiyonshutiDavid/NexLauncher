@@ -40,6 +40,19 @@ import Foundation
         #expect(cmd.hasSuffix("&& python3 -m uvicorn main:app --reload"))
     }
 
+    @Test func djangoWithPackageJsonStillRunsDjango() {
+        let t = TempTree()
+        t.write("site/manage.py")
+        t.write("site/package.json", #"{"scripts":{"dev":"tailwindcss -w"}}"#)
+        let cmd = CommandBuilder.command(for: .backend, at: t.root.appendingPathComponent("site"), framework: "Django", flutterDevice: nil)
+        #expect(cmd.hasSuffix("&& python3 manage.py runserver"))
+    }
+
+    @Test func flutterDeviceIsShellQuoted() {
+        let cmd = CommandBuilder.command(for: .flutter, at: URL(fileURLWithPath: "/tmp/m"), framework: nil, flutterDevice: "my phone;rm")
+        #expect(cmd.hasSuffix("&& flutter run -d 'my phone;rm'"))
+    }
+
     @Test func flutterIncludesDevice() {
         let cmd = CommandBuilder.command(for: .flutter, at: URL(fileURLWithPath: "/tmp/m"), framework: nil, flutterDevice: "macos")
         #expect(cmd.hasSuffix("&& flutter run -d macos"))
@@ -108,5 +121,19 @@ import Foundation
         let store = OverrideStore(fileURL: t.root.appendingPathComponent("o.json"))
         store.set(Override(kind: .backend, command: nil, port: nil), forPath: OverrideStore.key(directory: t.root.appendingPathComponent("P"), kind: .frontend))
         #expect(ProjectScanner(overrides: store).scan(root: t.root)[0].targets[0].kind == .backend)
+    }
+}
+
+@Suite struct OverrideEditTests {
+    @Test func customCommandSurvivesLaterPortEdit() {
+        let o = Override.edited(command: "npm run dev:local", port: "9000", defaultCommand: "npm run dev")
+        #expect(o == Override(command: "npm run dev:local", port: 9000))
+    }
+    @Test func matchingDefaultAndNoPortClearsOverride() {
+        #expect(Override.edited(command: "npm run dev", port: "", defaultCommand: "npm run dev") == nil)
+        #expect(Override.edited(command: "  ", port: "abc", defaultCommand: "npm run dev") == nil)
+    }
+    @Test func portOnlyOverrideKeepsDefaultCommand() {
+        #expect(Override.edited(command: "npm run dev", port: "3000", defaultCommand: "npm run dev") == Override(command: nil, port: 3000))
     }
 }

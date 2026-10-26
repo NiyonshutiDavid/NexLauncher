@@ -31,6 +31,8 @@ public final class AppModel {
     public var filter: ProjectFilter = .all
     public private(set) var gitBadges: [String: GitBadge] = [:]
     public var pendingInstall: PendingInstall?
+    private var hasScanned = false
+    private var queuedURL: URL?
     /// Test seam: replaces `npm install`.
     var installCommandOverride: String?
 
@@ -83,6 +85,8 @@ public final class AppModel {
         let scanner = ProjectScanner(overrides: overrides)
         projects = await Task.detached { scanner.scan(root: root) }.value
         publishSnapshot()
+        hasScanned = true
+        if let url = queuedURL { queuedURL = nil; await handle(url: url) }   // a widget tap that launched the app
         Task { await refreshGitBadges() }
     }
 
@@ -123,6 +127,7 @@ extension AppModel {
 
     /// Handles `nexlauncher://run?project=<id>` links from the Quick Launch widget.
     public func handle(url: URL) async {
+        if !hasScanned { queuedURL = url; return }
         guard url.scheme == "nexlauncher", url.host == "run",
               let id = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "project" })?.value,
               let project = projects.first(where: { $0.id == id }) else { return }

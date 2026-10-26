@@ -32,7 +32,9 @@ struct RunControls: View {
 
     private func isActive(_ action: RunAction) -> Bool {
         action.kinds.allSatisfy { kind in
-            model.processes.states[ServiceID(projectID: project.id, kind: kind)]?.isActive == true
+            project.targets.filter { $0.kind == kind }.allSatisfy {
+                model.processes.states[ProcessManager.id(for: $0, projectID: project.id)]?.isActive == true
+            }
         }
     }
 
@@ -48,7 +50,7 @@ struct ServiceStatusList: View {
 
     private var rows: [(ServiceID, ServiceState)] {
         model.processes.states.filter { $0.key.projectID == project.id && $0.value != .stopped }
-            .sorted { $0.key.kind.rawValue < $1.key.kind.rawValue }
+            .sorted { ($0.key.kind.rawValue, $0.key.directory) < ($1.key.kind.rawValue, $1.key.directory) }
             .map { ($0.key, $0.value) }
     }
 
@@ -58,7 +60,7 @@ struct ServiceStatusList: View {
                 ForEach(rows, id: \.0) { id, state in
                     HStack(spacing: 8) {
                         Circle().fill(color(state)).frame(width: 8, height: 8)
-                        Text(id.kind.rawValue.capitalized).font(.callout.weight(.medium))
+                        Text(title(for: id)).font(.callout.weight(.medium))
                         Text(label(state)).font(.callout).foregroundStyle(.secondary).lineLimit(1)
                         Spacer()
                         if case .running(let port?) = state {
@@ -69,6 +71,13 @@ struct ServiceStatusList: View {
                 }
             }
         }
+    }
+
+    /// "Frontend", or "Frontend · admin" when the project has several services of that kind.
+    private func title(for id: ServiceID) -> String {
+        let same = model.processes.states.keys.filter { $0.projectID == project.id && $0.kind == id.kind }.count
+        let name = id.kind.rawValue.capitalized
+        return same > 1 ? "\(name) · \(URL(fileURLWithPath: id.directory).lastPathComponent)" : name
     }
 
     private func color(_ s: ServiceState) -> Color {

@@ -150,4 +150,25 @@ import NexTestSupport
         if case .authFailed = GitService.classify("git@github.com: Permission denied (publickey).") {} else { Issue.record("publickey not mapped") }
         if case .authFailed = GitService.classify("fatal: could not read Username for 'https://github.com': terminal prompts disabled") {} else { Issue.record("username prompt not mapped") }
     }
+
+    @Test func discardWithBracketedPathDoesNotTouchSiblings() async throws {
+        let r = TempRepo()
+        r.write("app/[id]/page.tsx", "orig"); r.write("app/i/page.tsx", "orig"); r.commitAll()
+        r.write("app/[id]/page.tsx", "dirty"); r.write("app/i/page.tsx", "my-uncommitted-work")
+        r.write("app/[id]/new.tsx", "x"); r.write("app/d/new.tsx", "keep-me")
+        try await r.service.discard(r.dir, paths: ["app/[id]/page.tsx", "app/[id]/new.tsx"])
+        func read(_ p: String) -> String? { try? String(contentsOf: r.dir.appendingPathComponent(p), encoding: .utf8) }
+        #expect(read("app/[id]/page.tsx") == "orig")
+        #expect(read("app/i/page.tsx") == "my-uncommitted-work")
+        #expect(read("app/[id]/new.tsx") == nil)
+        #expect(read("app/d/new.tsx") == "keep-me")
+    }
+
+    @Test func stagingBracketedPathStagesOnlyThatFile() async throws {
+        let r = TempRepo()
+        r.write("app/[id]/page.tsx", "a"); r.write("app/i/page.tsx", "b")
+        try await r.service.stage(r.dir, paths: ["app/[id]/page.tsx"])
+        let changes = try await r.service.status(r.dir).changes
+        #expect(changes.filter(\.isStaged).map(\.path) == ["app/[id]/page.tsx"])
+    }
 }

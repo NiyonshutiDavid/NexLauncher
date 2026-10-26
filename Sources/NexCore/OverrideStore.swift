@@ -12,6 +12,17 @@ public struct Override: Codable, Equatable, Sendable {
     }
 }
 
+extension Override {
+    /// Builds the override to store from the Settings fields. A command equal to the *detected default*
+    /// is not an override; an unparsable port is ignored.
+    public static func edited(command: String, port: String, defaultCommand: String) -> Override? {
+        let trimmed = command.trimmingCharacters(in: .whitespacesAndNewlines)
+        let custom = trimmed.isEmpty || trimmed == defaultCommand ? nil : trimmed
+        let parsedPort = Int(port.trimmingCharacters(in: .whitespaces))
+        return custom == nil && parsedPort == nil ? nil : Override(command: custom, port: parsedPort)
+    }
+}
+
 /// Persists per-service overrides as JSON, keyed by `"<directory path>|<detected kind>"`.
 public final class OverrideStore: @unchecked Sendable {
     private let fileURL: URL

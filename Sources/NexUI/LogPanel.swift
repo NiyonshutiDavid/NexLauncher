@@ -5,25 +5,31 @@ import NexProcess
 struct LogPanel: View {
     @Bindable var model: AppModel
     let project: Project
-    @State private var selected: ServiceKind?
+    @State private var selected: ServiceID?
 
-    private var kinds: [ServiceKind] {
-        let ids = model.processes.logs.keys.filter { $0.projectID == project.id }
-        return ids.map(\.kind).sorted { $0.rawValue < $1.rawValue }
+    private var ids: [ServiceID] {
+        model.processes.logs.keys.filter { $0.projectID == project.id }
+            .sorted { ($0.kind.rawValue, $0.directory) < ($1.kind.rawValue, $1.directory) }
+    }
+
+    private func label(_ id: ServiceID) -> String {
+        let name = id.kind.rawValue.capitalized
+        let same = ids.filter { $0.kind == id.kind }.count
+        return same > 1 ? "\(name) · \(URL(fileURLWithPath: id.directory).lastPathComponent)" : name
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            if kinds.isEmpty {
+            if ids.isEmpty {
                 ContentUnavailableView("No output yet", systemImage: "text.alignleft",
                                        description: Text("Start a service to see its logs here."))
             } else {
-                Picker("Service", selection: Binding(get: { selected ?? kinds[0] }, set: { selected = $0 })) {
-                    ForEach(kinds, id: \.self) { Text($0.rawValue.capitalized).tag($0) }
+                Picker("Service", selection: Binding(get: { ids.contains(selected ?? ids[0]) ? (selected ?? ids[0]) : ids[0] }, set: { selected = $0 })) {
+                    ForEach(ids, id: \.self) { Text(label($0)).tag($0) }
                 }
                 .pickerStyle(.segmented)
                 .frame(maxWidth: 360)
-                let lines = model.processes.logs[ServiceID(projectID: project.id, kind: selected ?? kinds[0])] ?? []
+                let lines = model.processes.logs[ids.contains(selected ?? ids[0]) ? (selected ?? ids[0]) : ids[0]] ?? []
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 1) {

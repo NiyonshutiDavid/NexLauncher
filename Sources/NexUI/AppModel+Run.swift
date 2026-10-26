@@ -63,8 +63,9 @@ extension AppModel {
             install.command = installCommandOverride.map { "cd \(CommandBuilder.quote(target.directory.path)) && \($0)" }
                 ?? CommandBuilder.installCommand(for: target)
             processes.start(install, projectID: pending.project.id)
-            let id = ServiceID(projectID: pending.project.id, kind: target.kind)
+            let id = ProcessManager.id(for: target, projectID: pending.project.id)
             while processes.states[id]?.isActive == true { try? await Task.sleep(for: .milliseconds(50)) }
+            if processes.wasUserStopped(id) { return }          // Stop pressed mid-install: don't start the server
             if case .failed = processes.states[id] { return }   // leave the failure visible in the log
         }
         await run(pending.project, kinds: pending.kinds, flutterDevice: pending.flutterDevice)

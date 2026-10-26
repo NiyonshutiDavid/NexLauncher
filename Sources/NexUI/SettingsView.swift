@@ -45,7 +45,7 @@ public struct SettingsView: View {
                 Text("Detected commands can be overridden per project (command and port).")
                     .font(.caption).foregroundStyle(.secondary)
                 ForEach(model.projects) { project in
-                    ForEach(project.targets, id: \.directory) { target in
+                    ForEach(project.targets, id: \.self) { target in
                         OverrideRow(model: model, target: target, projectName: project.name)
                     }
                 }
@@ -92,10 +92,8 @@ private struct OverrideRow: View {
     }
 
     private func save() {
-        let trimmed = command.trimmingCharacters(in: .whitespaces)
-        let custom = trimmed.isEmpty || trimmed == target.command ? nil : trimmed
-        let p = Int(port)
-        model.overrides.set(custom == nil && p == nil ? nil : Override(command: custom, port: p), forPath: key)
+        let detected = CommandBuilder.command(for: target.kind, at: target.directory, framework: target.framework, flutterDevice: "macos")
+        model.overrides.set(Override.edited(command: command, port: port, defaultCommand: detected), forPath: key)
         Task { await model.refresh() }
     }
 }

@@ -34,6 +34,7 @@ public struct GitRunner: Sendable {
             environment["GIT_TERMINAL_PROMPT"] = "0"
             environment["GIT_EDITOR"] = "true"
             environment["LC_ALL"] = "C"
+            environment["GIT_LITERAL_PATHSPECS"] = "1"   // paths are file names, never globs ([id], *, ?)
             environment.merge(env) { $1 }
             p.environment = environment
             let out = Pipe(), err = Pipe()
@@ -59,7 +60,9 @@ public struct GitRunner: Sendable {
                 return
             }
             DispatchQueue.global().asyncAfter(deadline: .now() + timeout) {
-                if p.isRunning { p.terminate(); state.fail(GitError.timeout) }
+                // Fires even if git already exited but a child still holds the pipe open.
+                if p.isRunning { p.terminate() }
+                state.fail(GitError.timeout)
             }
         }
     }
