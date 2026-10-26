@@ -130,3 +130,90 @@ extension AppModel {
         }
     }
 }
+
+// MARK: - Home content
+
+public enum EmptyStateKind: Equatable, Sendable { case noProjects, noResults }
+
+public enum DetailTab: String, CaseIterable, Identifiable, Sendable {
+    case overview = "Overview", terminal = "Terminal", logs = "Logs", git = "Git", files = "Files"
+    public var id: String { rawValue }
+}
+
+public enum HomeItem: Identifiable {
+    case project(Project)
+    case collection(ProjectNode)
+
+    public var id: String {
+        switch self {
+        case .project(let p): return p.id
+        case .collection(let n): return n.id
+        }
+    }
+}
+
+public enum HomeText {
+    public static func appsInside(_ n: Int) -> String { n == 1 ? "1 app inside" : "\(n) apps inside" }
+    public static func projectsIn(_ n: Int) -> String { n == 1 ? "1 project" : "\(n) projects" }
+}
+
+public enum CardPrimaryAction {
+    /// What the main pill does: prefers running everything, then frontend, backend, Flutter, Docker.
+    public static func defaultAction(for actions: [RunAction]) -> RunAction? {
+        [RunAction.both, .frontend, .backend, .flutter, .docker].first { actions.contains($0) }
+    }
+
+    public static func title(running: Bool, actions: [RunAction]) -> String {
+        if running { return "Stop" }
+        guard let action = defaultAction(for: actions) else { return "Run" }
+        return actions.count > 1 ? "Run \(action.rawValue)" : "Run"
+    }
+}
+
+extension AppModel {
+    public func select(filter newFilter: ProjectFilter) {
+        page = .home
+        filter = newFilter
+        showOnlyUncommitted = false
+    }
+
+    /// Top-level items for Home: apps and collections as on disk, or a flat filtered list while filtering or searching.
+    public var homeItems: [HomeItem] {
+        let query = searchText.trimmingCharacters(in: .whitespaces)
+        if filter == .all && query.isEmpty && !showOnlyUncommitted {
+            return tree.map { node in
+                if node.kind == .collection { return .collection(node) }
+                return .project(node.project!)
+            }
+        }
+        return filteredProjects.map { .project($0) }
+    }
+
+    public var emptyState: EmptyStateKind? {
+        if projects.isEmpty { return isScanning ? nil : .noProjects }
+        return homeItems.isEmpty ? .noResults : nil
+    }
+
+    public func node(id: String) -> ProjectNode? {
+        func search(_ nodes: [ProjectNode]) -> ProjectNode? {
+            for n in nodes {
+                if n.id == id { return n }
+                if let hit = search(n.children) { return hit }
+            }
+            return nil
+        }
+        return search(tree)
+    }
+
+    public func project(id: String) -> Project? { projects.first { $0.id == id } }
+
+    /// Opens a terminal tab at `url` and shows the Terminal tab of `page`.
+    public func showTerminal(at url: URL, page target: AppPage) {
+        terminals.open(at: url)
+        page = target
+        detailTab = .terminal
+    }
+
+    public func setTheme(_ theme: ThemeID) { settings.settings.theme = theme; settings.save() }
+    public func setAppearance(_ mode: AppearanceMode) { settings.settings.appearance = mode; settings.save() }
+}

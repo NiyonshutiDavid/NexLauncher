@@ -38,6 +38,7 @@ public final class AppModel {
     public var page: AppPage = .home
     public var sheet: AppSheet?
     public var showOnlyUncommitted = false
+    public var detailTab: DetailTab = .overview
     /// Global git name+email present? Starts true so the CTA doesn't flash before the first check.
     public var gitIdentitySet = true
     private var hasScanned = false
