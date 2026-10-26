@@ -10,6 +10,16 @@ public struct ProjectTask: Codable, Identifiable, Equatable, Sendable {
     public var doneAt: Date?
 
     public var isDone: Bool { doneAt != nil }
+
+    public init(id: UUID, projectID: String, projectName: String, title: String, notes: String, createdAt: Date, doneAt: Date?) {
+        self.id = id
+        self.projectID = projectID
+        self.projectName = projectName
+        self.title = title
+        self.notes = notes
+        self.createdAt = createdAt
+        self.doneAt = doneAt
+    }
 }
 
 /// Per-project to-dos, stored as JSON in the app's support folder (the widget reads the summary from the snapshot).

@@ -63,3 +63,15 @@ import Foundation
         #expect(DeviceParsers.shortlist(all, limit: 5).map(\.name) == ["C"])
     }
 }
+
+@Suite struct SimulatorGroupingTests {
+    @Test func groupsByRuntimeNewestFirstWithNamesSorted() {
+        let sims = [SimulatorDevice(udid: "1", name: "iPhone 16", runtime: "iOS 18.5", isBooted: false),
+                    SimulatorDevice(udid: "2", name: "iPhone Air", runtime: "iOS 26.0", isBooted: false),
+                    SimulatorDevice(udid: "3", name: "iPad Pro", runtime: "iOS 26.0", isBooted: true),
+                    SimulatorDevice(udid: "4", name: "iPhone 8", runtime: "iOS 9.3", isBooted: false)]
+        let groups = DeviceParsers.groupedByRuntime(sims)
+        #expect(groups.map(\.runtime) == ["iOS 26.0", "iOS 18.5", "iOS 9.3"])
+        #expect(groups[0].devices.map(\.name) == ["iPad Pro", "iPhone Air"])
+    }
+}

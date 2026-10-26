@@ -8,21 +8,31 @@ public struct QuickPanelSections {
     public static let headerHeight: CGFloat = 28
     public static let maxListHeight: CGFloat = 430
 
+    public static let maxTasks = 5
+    public static let taskRowHeight: CGFloat = 40
+
     public let running: [Project]
     public let pinned: [Project]
+    /// Open tasks, newest first, capped at `maxTasks`.
+    public let tasks: [ProjectTask]
+    public let moreTasks: Int
 
-    public init(running: [Project], pinned: [Project]) {
+    public init(running: [Project], pinned: [Project], tasks: [ProjectTask] = []) {
         self.running = running
         let runningIDs = Set(running.map(\.id))
         self.pinned = pinned.filter { !runningIDs.contains($0.id) }
+        let open = tasks.filter { !$0.isDone }.sorted { $0.createdAt > $1.createdAt }
+        self.tasks = Array(open.prefix(Self.maxTasks))
+        self.moreTasks = max(open.count - Self.maxTasks, 0)
     }
 
-    public var isEmpty: Bool { running.isEmpty && pinned.isEmpty }
+    public var isEmpty: Bool { running.isEmpty && pinned.isEmpty && tasks.isEmpty }
 
     /// An explicit height: a ScrollView with only a max height collapses to nothing inside a menu bar panel.
     public var listHeight: CGFloat {
-        let headers = (running.isEmpty ? 0 : 1) + (pinned.isEmpty ? 0 : 1)
+        let headers = (running.isEmpty ? 0 : 1) + (pinned.isEmpty ? 0 : 1) + (tasks.isEmpty ? 0 : 1)
         let rows = CGFloat(running.count + pinned.count) * Self.rowHeight + CGFloat(headers) * Self.headerHeight + 16
+            + CGFloat(tasks.count) * Self.taskRowHeight + (moreTasks > 0 ? 24 : 0)
         return min(rows, Self.maxListHeight)
     }
 }
@@ -35,7 +45,7 @@ public struct MenuBarContent: View {
     public init(model: AppModel) { self.model = model }
 
     public var body: some View {
-        let sections = QuickPanelSections(running: model.runningProjects, pinned: model.pinnedProjects)
+        let sections = QuickPanelSections(running: model.runningProjects, pinned: model.pinnedProjects, tasks: model.tasks)
         VStack(spacing: 0) {
             HStack(spacing: 10) {
                 ProfileAvatar(settings: model.settings.settings, size: 30)
@@ -52,8 +62,8 @@ public struct MenuBarContent: View {
             if sections.isEmpty {
                 VStack(spacing: 8) {
                     IllustrationView(.pin).frame(width: 96, height: 96)
-                    Text("Nothing running or pinned").font(.callout.weight(.semibold)).foregroundStyle(theme.fg)
-                    Text("Pin projects in NexLauncher to start them from here.")
+                    Text("Nothing running, pinned or to do").font(.callout.weight(.semibold)).foregroundStyle(theme.fg)
+                    Text("Pin projects or add tasks in NexLauncher to see them here.")
                         .font(.caption).foregroundStyle(theme.fg2).multilineTextAlignment(.center)
                 }
                 .padding(20).frame(maxWidth: .infinity)
@@ -67,6 +77,15 @@ public struct MenuBarContent: View {
                         if !sections.pinned.isEmpty {
                             header("Pinned")
                             ForEach(sections.pinned) { QuickRow(model: model, project: $0) }
+                        }
+                        if !sections.tasks.isEmpty {
+                            header("Tasks")
+                            ForEach(sections.tasks) { QuickTaskRow(model: model, task: $0) }
+                            if sections.moreTasks > 0 {
+                                Button("\(sections.moreTasks) more in NexLauncher") { model.page = .tasks; model.showMainWindow() }
+                                    .buttonStyle(.plain).font(.caption.weight(.semibold)).foregroundStyle(theme.accent)
+                                    .padding(.horizontal, 8).frame(height: 24)
+                            }
                         }
                     }
                     .padding(8)
@@ -126,5 +145,31 @@ private struct QuickRow: View {
         .padding(.horizontal, 8).frame(height: QuickPanelSections.rowHeight - 4)
         .background(hovering ? theme.accentSoft.opacity(0.7) : .clear, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .onHover { hovering = $0 }
+    }
+}
+
+/// An open task: tick it off right from the menu bar.
+private struct QuickTaskRow: View {
+    @Bindable var model: AppModel
+    @Environment(\.theme) private var theme
+    let task: ProjectTask
+    @State private var hovering = false
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Button { withAnimation(.spring(duration: 0.35)) { model.setTaskDone(task, true) } } label: {
+                Image(systemName: "circle").font(.title3).foregroundStyle(hovering ? theme.accent : theme.fg3)
+            }
+            .buttonStyle(PressableStyle()).help("Mark as done")
+            VStack(alignment: .leading, spacing: 0) {
+                Text(task.title).font(.callout.weight(.medium)).foregroundStyle(theme.fg).lineLimit(1)
+                Text(task.projectName).font(.caption2).foregroundStyle(theme.fg3).lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 8).frame(height: QuickPanelSections.taskRowHeight - 2)
+        .background(hovering ? theme.accentSoft.opacity(0.7) : .clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .onHover { hovering = $0 }
+        .transition(.asymmetric(insertion: .opacity, removal: .move(edge: .trailing).combined(with: .opacity)))
     }
 }

@@ -28,3 +28,25 @@ import NexCore
         #expect(one.listHeight < many.listHeight)
     }
 }
+
+@Suite struct QuickPanelTaskTests {
+    private func task(_ title: String, done: Bool = false) -> ProjectTask {
+        ProjectTask(id: UUID(), projectID: "/p/A", projectName: "A", title: title, notes: "", createdAt: Date(), doneAt: done ? Date() : nil)
+    }
+
+    @Test func openTasksAreListedAndCapped() {
+        let tasks = (1...9).map { task("T\($0)") } + [task("done", done: true)]
+        let s = QuickPanelSections(running: [], pinned: [], tasks: tasks)
+        #expect(s.tasks.count == QuickPanelSections.maxTasks)
+        #expect(!s.tasks.contains { $0.isDone })
+        #expect(s.moreTasks == 9 - QuickPanelSections.maxTasks)
+        #expect(!s.isEmpty)
+    }
+
+    @Test func tasksAddToTheListHeight() {
+        let without = QuickPanelSections(running: [], pinned: [], tasks: [])
+        let with = QuickPanelSections(running: [], pinned: [], tasks: [task("a"), task("b")])
+        #expect(without.isEmpty)
+        #expect(with.listHeight > 0)
+    }
+}

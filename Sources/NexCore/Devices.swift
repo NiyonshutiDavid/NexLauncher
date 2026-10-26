@@ -63,4 +63,18 @@ public enum DeviceParsers {
         let latest = sims.filter { !$0.isBooted && $0.runtime == newest }
         return Array((booted + latest).prefix(limit))
     }
+
+    public struct RuntimeGroup: Identifiable, Equatable, Sendable {
+        public let runtime: String
+        public let devices: [SimulatorDevice]
+        public var id: String { runtime }
+    }
+
+    /// Simulators grouped by iOS version, newest first, names sorted within each group.
+    public static func groupedByRuntime(_ sims: [SimulatorDevice]) -> [RuntimeGroup] {
+        func version(_ runtime: String) -> [Int] { runtime.split(whereSeparator: { !$0.isNumber }).compactMap { Int($0) } }
+        return Dictionary(grouping: sims, by: \.runtime)
+            .map { RuntimeGroup(runtime: $0.key, devices: $0.value.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }) }
+            .sorted { version($1.runtime).lexicographicallyPrecedes(version($0.runtime)) }
+    }
 }
