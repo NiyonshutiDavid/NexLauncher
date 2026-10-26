@@ -44,7 +44,7 @@ struct SidebarView: View {
                         Image(systemName: "bolt.horizontal.circle.fill").foregroundStyle(theme.accent).font(.title3)
                         Text("NexLauncher").font(.headline.weight(.bold)).foregroundStyle(theme.fg)
                     }
-                    .padding(.horizontal, 12).padding(.top, 34).padding(.bottom, 10)        // just below the window controls
+                    .padding(.horizontal, 12).padding(.top, 4).padding(.bottom, 10)        // just below the window controls
 
                     ForEach(ProjectFilter.allCases) { f in
                         Button { model.select(filter: f) } label: {

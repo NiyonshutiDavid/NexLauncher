@@ -4,9 +4,10 @@ import NexCore
 /// WhatsApp-style header: no bar. Floating glass buttons and a centred title over a soft fade, so the content
 /// dissolves beneath it — the same in a window and in full screen.
 enum HeaderMetrics {
-    static let height: CGFloat = 64
+    /// The header row sits level with the window controls, from the very top of the window.
+    static let height: CGFloat = 54
     /// Scroll content starts below the header but scrolls up under the fade.
-    static let contentInset: CGFloat = 76
+    static let contentInset: CGFloat = 40
 }
 
 extension View {
@@ -35,7 +36,7 @@ private struct FadingHeaderModifier<Leading: View, Trailing: View>: ViewModifier
                                            .init(color: theme.canvas.opacity(0.85), location: 0.45),
                                            .init(color: theme.canvas.opacity(0), location: 1)],
                                    startPoint: .top, endPoint: .bottom)
-                        .frame(height: HeaderMetrics.height + 26)
+                        .frame(height: HeaderMetrics.height + 34)
                         .frame(maxHeight: .infinity, alignment: .top)
                         .allowsHitTesting(false)
                     Text(title).font(.headline.weight(.semibold)).foregroundStyle(theme.fg).lineLimit(1)
@@ -46,9 +47,11 @@ private struct FadingHeaderModifier<Leading: View, Trailing: View>: ViewModifier
                         trailing
                     }
                     .padding(.horizontal, 20)
+                    .padding(.top, 6)
                 }
                 .frame(height: HeaderMetrics.height)
                 .frame(maxWidth: .infinity, alignment: .top)
+                .ignoresSafeArea(.container, edges: .top)     // start at the window's top edge, no strip above
             }
     }
 }

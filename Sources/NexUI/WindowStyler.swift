@@ -18,6 +18,11 @@ struct WindowStyler: NSViewRepresentable {
         guard let window else { return }
         window.titlebarAppearsTransparent = true
         window.titlebarSeparatorStyle = .none
+        window.titleVisibility = .hidden
         window.styleMask.insert(.fullSizeContentView)
+        // Keep the window controls (close / minimise / zoom) even though the toolbar is hidden.
+        for kind in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
+            window.standardWindowButton(kind)?.isHidden = false
+        }
     }
 }
