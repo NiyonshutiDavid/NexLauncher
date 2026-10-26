@@ -26,6 +26,20 @@ struct SettingsPage: View {
         }
     }
 
+    private var settingsHero: some View {
+        let copy: (String, String, IllustrationKind) = {
+            switch selected {
+            case .profile: return ("You, at a glance", "Your name greets you every day and appears on your avatar.", .power)
+            case .git: return ("Git, your way", "Set who you commit as and how Pull behaves for every repository.", .branchGraph)
+            case .appearance: return ("Make it yours", "Light or dark, and an accent. The default uses the nexventures.net colours.", .swatches)
+            case .notifications: return ("Stay in the loop", "Hear when a server is ready, when one stops, and when an agent finishes.", .widgets)
+            case .general: return ("The basics", "Start-up, the Dock icon and where your projects live.", .terminal)
+            case .projects: return ("Your projects", "Pin favourites for the widget and adjust how each service starts.", .folders)
+            }
+        }()
+        return HeroBanner(eyebrow: selected.rawValue, title: copy.0, subtitle: copy.1, illustration: copy.2)
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
@@ -47,6 +61,7 @@ struct SettingsPage: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
+                    settingsHero
                     switch selected {
                     case .profile: ProfileSection(model: model)
                     case .git: GitSection(model: model)

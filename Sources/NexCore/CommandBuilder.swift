@@ -48,6 +48,11 @@ public enum CommandBuilder {
         return !markers.contains { fm.fileExists(atPath: target.directory.appendingPathComponent($0).path) }
     }
 
+    /// The setup command without the leading `cd` (for display).
+    public static func installBody(for target: ServiceTarget) -> String {
+        stack(for: target.kind, at: target.directory, framework: target.framework)?.install ?? "npm install"
+    }
+
     public static func installCommand(for target: ServiceTarget) -> String {
         let install = stack(for: target.kind, at: target.directory, framework: target.framework)?.install ?? "npm install"
         return "cd \(quote(target.directory.path)) && \(install)"

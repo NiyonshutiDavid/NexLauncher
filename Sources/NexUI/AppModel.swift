@@ -37,6 +37,8 @@ public final class AppModel {
     public var filter: ProjectFilter = .all
     public private(set) var gitBadges: [String: GitBadge] = [:]
     public var pendingInstall: PendingInstall?
+    /// Drives the Set up sheet (confirm → running → failed); nil once the project is running.
+    public var setup: SetupSession?
     public var page: AppPage = .home
     public var sheet: AppSheet?
     public var showOnlyUncommitted = false

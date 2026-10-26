@@ -36,16 +36,7 @@ private struct RootContent: View {
             case .widgetsHowTo: WidgetsHowToSheet(model: model)
             }
         }
-        .confirmationDialog(
-            "Install dependencies first?",
-            isPresented: Binding(get: { model.pendingInstall != nil }, set: { if !$0 { model.cancelInstall() } }),
-            presenting: model.pendingInstall
-        ) { _ in
-            Button("Run npm install, then start") { Task { await model.confirmInstall() } }
-            Button("Cancel", role: .cancel) { model.cancelInstall() }
-        } message: { pending in
-            Text("\(pending.project.name) has no node_modules folder yet.")
-        }
+        .sheet(item: $model.setup) { session in SetupSheet(model: model, session: session) }
     }
 
     @ViewBuilder private var page: some View {

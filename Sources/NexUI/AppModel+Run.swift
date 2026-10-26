@@ -56,6 +56,10 @@ extension AppModel {
         let targets = project.targets.filter { kinds.contains($0.kind) }
         if targets.contains(where: CommandBuilder.needsInstall) {
             pendingInstall = PendingInstall(project: project, kinds: kinds, flutterDevice: flutterDevice)
+            setup = SetupSession(project: project, steps: targets.filter(CommandBuilder.needsInstall).map { target in
+                let body = CommandBuilder.installBody(for: target)
+                return SetupStep(id: ProcessManager.id(for: target, projectID: project.id), title: SetupStep.describe(body), command: body)
+            })
             showMainWindow()          // the install question lives in the main window
             return
         }
@@ -73,24 +77,39 @@ extension AppModel {
     public func confirmInstall() async {
         guard let pending = pendingInstall else { return }
         pendingInstall = nil
+        setup?.phase = .running
         for target in pending.project.targets where pending.kinds.contains(target.kind) && CommandBuilder.needsInstall(target) {
             var install = target
             install.port = nil        // an install isn't the server: it must not look 'ready' on a configured port
             install.command = installCommandOverride.map { "cd \(CommandBuilder.quote(target.directory.path)) && \($0)" }
                 ?? CommandBuilder.installCommand(for: target)
-            processes.start(install, projectID: pending.project.id)
             let id = ProcessManager.id(for: target, projectID: pending.project.id)
+            setup?.mark(id, .running)
+            processes.start(install, projectID: pending.project.id)
             while processes.states[id]?.isActive == true { try? await Task.sleep(for: .milliseconds(50)) }
-            if processes.wasUserStopped(id) { return }          // Stop pressed mid-install: don't start the server
-            if case .failed = processes.states[id] { return }   // leave the failure visible in the log
+            if processes.wasUserStopped(id) { setup = nil; return }          // Stop pressed mid-install: don't start the server
+            if case .failed(let reason) = processes.states[id] {               // keep the sheet open with the reason
+                setup?.mark(id, .failed)
+                setup?.phase = .failed(reason)
+                return
+            }
+            setup?.mark(id, .done)
         }
         // Setup can change how a project runs (e.g. a new .venv), so rescan before starting it.
         await refresh()
         let fresh = project(id: pending.project.id) ?? pending.project
+        setup = nil
         await run(fresh, kinds: pending.kinds, flutterDevice: pending.flutterDevice)
     }
 
-    public func cancelInstall() { pendingInstall = nil }
+    public func cancelInstall() { pendingInstall = nil; setup = nil }
+
+    /// The newest log line of the setup step that is running (for the sheet).
+    public var setupLastLine: String? {
+        guard let step = setup?.steps.first(where: { $0.status == .running }) else { return nil }
+        return processes.logs[step.id]?.last(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty }).map(PortParser.stripANSI)
+    }
+
 
     public func stop(_ project: Project) async {
         for id in processes.states.keys where id.projectID == project.id && processes.states[id]?.isActive == true {

@@ -9,15 +9,12 @@ struct CollectionView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                HStack(spacing: 16) {
-                    IconTile(name: node.name, glyph: "folder.fill", size: 72)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(node.name).font(.system(size: 32, weight: .bold, design: .rounded)).foregroundStyle(theme.fg)
-                        Text("Collection · \(HomeText.projectsIn(node.apps.count))").foregroundStyle(theme.fg2)
-                    }
-                    Spacer()
-                    IconButton("terminal", help: "Open a terminal in this folder") { model.showTerminal(at: node.url, page: .folder(node.url.path)) }
-                }
+                HeroBanner(eyebrow: "Collection", title: node.name,
+                           subtitle: "\(HomeText.projectsIn(node.apps.count)) live in this folder. Each one runs, has git and a terminal of its own.",
+                           illustration: .folders,
+                           actions: [HeroAction(title: "Terminal here", systemImage: "terminal", style: .quiet) {
+                               model.showTerminal(at: node.url, page: .folder(node.url.path))
+                           }])
 
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 340, maximum: 520), spacing: 20)], spacing: 20) {
                     ForEach(node.children) { NodeCard(model: model, node: $0) }
