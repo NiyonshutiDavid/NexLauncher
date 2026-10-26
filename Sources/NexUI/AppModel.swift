@@ -12,11 +12,12 @@ public struct GitBadge: Equatable, Sendable {
 }
 
 public enum ProjectFilter: String, CaseIterable, Identifiable, Sendable {
-    case all = "All Projects", fullStack = "Full-stack", running = "Running", flutter = "Flutter"
+    case all = "All Projects", pinned = "Pinned", running = "Running", fullStack = "Full-stack", flutter = "Flutter"
     public var id: String { rawValue }
     public var symbol: String {
         switch self {
         case .all: return "square.grid.2x2"
+        case .pinned: return "pin"
         case .fullStack: return "rectangle.on.rectangle"
         case .running: return "play.circle"
         case .flutter: return "iphone"
@@ -87,6 +88,7 @@ public final class AppModel {
             case .fullStack: guard project.isFullStack else { return false }
             case .flutter: guard project.targets.contains(where: { $0.kind == .flutter }) else { return false }
             case .running: guard isRunning(project) else { return false }
+            case .pinned: guard isPinned(project) else { return false }
             }
             if showOnlyUncommitted, (gitBadges[project.id]?.changes ?? 0) == 0 { return false }
             return query.isEmpty || project.name.localizedCaseInsensitiveContains(query)

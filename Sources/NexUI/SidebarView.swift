@@ -8,6 +8,7 @@ struct SidebarView: View {
     private func count(_ f: ProjectFilter) -> Int {
         switch f {
         case .all: return model.projects.count
+        case .pinned: return model.pinnedProjects.count
         case .running: return model.projects.filter { model.isRunning($0) }.count
         case .fullStack: return model.projects.filter(\.isFullStack).count
         case .flutter: return model.projects.filter { $0.targets.contains { $0.kind == .flutter } }.count

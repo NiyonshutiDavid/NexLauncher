@@ -17,6 +17,7 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 30) {
                 GreetingHeader(greeting: model.greeting, subtitle: subtitle)
                 CTAShelf(model: model)
+                PinnedShelf(model: model)
                 RunningShelf(model: model)
 
                 VStack(alignment: .leading, spacing: 14) {

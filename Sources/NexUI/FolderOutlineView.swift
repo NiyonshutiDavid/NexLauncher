@@ -74,7 +74,10 @@ struct OutlineRow: View {
                 .buttonStyle(.plain)
 
                 Spacer()
-                if let project { RunPill(model: model, project: project) }
+                if let project {
+                    RunPill(model: model, project: project)
+                    IconButton(model.isPinned(project) ? "pin.fill" : "pin", help: model.isPinned(project) ? "Unpin" : "Pin") { model.togglePin(project) }
+                }
                 IconButton("terminal", help: "Open a terminal here") {
                     model.showTerminal(at: entry.url, page: openPage(entry, project))
                 }

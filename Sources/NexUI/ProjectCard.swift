@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import NexCore
 
 struct ProjectCard: View {
@@ -24,6 +25,9 @@ struct ProjectCard: View {
                     if let g = model.gitBadges[project.id] { Badge(text: gitText(g), tint: g.isClean ? theme.fg3 : theme.accent) }
                     if nestedCount > 0 { Badge(text: HomeText.appsInside(nestedCount), tint: theme.fg2) }
                     Spacer()
+                    IconButton(model.isPinned(project) ? "pin.fill" : "pin", help: model.isPinned(project) ? "Unpin" : "Pin to menu bar, Dock and widget") {
+                        model.togglePin(project)
+                    }
                     IconButton("terminal", help: "Open a terminal here") {
                         model.showTerminal(at: project.root, page: .project(project.id))
                     }
@@ -34,6 +38,11 @@ struct ProjectCard: View {
         }
         .contentShape(RoundedRectangle(cornerRadius: 22))
         .onTapGesture { model.page = .project(project.id); model.detailTab = .overview }
+        .contextMenu {
+            Button(model.isPinned(project) ? "Unpin" : "Pin", systemImage: model.isPinned(project) ? "pin.slash" : "pin") { model.togglePin(project) }
+            Button("Open Terminal Here", systemImage: "terminal") { model.showTerminal(at: project.root, page: .project(project.id)) }
+            Button("Reveal in Finder", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([project.root]) }
+        }
     }
 
     private func gitText(_ g: GitBadge) -> String {

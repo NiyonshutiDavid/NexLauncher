@@ -54,6 +54,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Owned here (not by a window) so Quit can always see running services and terminals, even with no window open.
     let model = AppModel()
 
+    /// Right-clicking the Dock icon lists pinned projects with one-click Run/Stop.
+    func applicationDockMenu(_ sender: NSApplication) -> NSMenu? {
+        let menu = NSMenu()
+        let entries = PinnedMenu.entries(pinned: model.pinnedProjects, isRunning: { model.isRunning($0) })
+        if entries.isEmpty {
+            let hint = NSMenuItem(title: "Pin projects in NexLauncher to list them here", action: nil, keyEquivalent: "")
+            hint.isEnabled = false
+            menu.addItem(hint)
+        } else {
+            for entry in entries {
+                let item = NSMenuItem(title: entry.title, action: #selector(dockToggle(_:)), keyEquivalent: "")
+                item.target = self
+                item.representedObject = entry.id
+                item.image = NSImage(systemSymbolName: entry.isRunning ? "stop.fill" : "play.fill", accessibilityDescription: nil)
+                menu.addItem(item)
+            }
+        }
+        return menu
+    }
+
+    @objc private func dockToggle(_ item: NSMenuItem) {
+        guard let id = item.representedObject as? String, let project = model.project(id: id) else { return }
+        Task { await model.toggleRun(project) }
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {

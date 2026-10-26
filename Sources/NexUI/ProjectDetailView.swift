@@ -42,7 +42,10 @@ struct ProjectDetailView: View {
                 Text(project?.name ?? folder.lastPathComponent).font(.system(size: 32, weight: .bold, design: .rounded)).foregroundStyle(theme.fg)
                 Text(project.map(ProjectSubtitle.text(for:)) ?? "Folder").font(.title3).foregroundStyle(theme.fg2)
                 HStack(spacing: 10) {
-                    if let project { RunPill(model: model, project: project) }
+                    if let project {
+                        RunPill(model: model, project: project)
+                        IconButton(model.isPinned(project) ? "pin.fill" : "pin", help: model.isPinned(project) ? "Unpin" : "Pin to menu bar, Dock and widget") { model.togglePin(project) }
+                    }
                     IconButton("terminal", help: "Open a terminal here") { model.showTerminal(at: folder, page: model.page) }
                     IconButton("folder", help: "Reveal in Finder") { NSWorkspace.shared.activateFileViewerSelecting([folder]) }
                 }
