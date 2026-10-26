@@ -45,7 +45,9 @@ struct HomeView: View {
             case .flutter:
                 HeroBanner(eyebrow: "Flutter", title: "Simulators & emulators",
                            subtitle: "Launch an iOS simulator or an Android emulator from Android Studio, then run your app on it.",
-                           illustration: .phone)
+                           illustration: .phone,
+                           actions: [HeroAction(title: "Refresh devices", systemImage: "arrow.clockwise", style: .quiet) { Task { await model.devices.refresh() } }])
+                FlutterDevicesPanel(model: model)
             }
         }
     }

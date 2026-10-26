@@ -68,6 +68,7 @@ public final class AppModel {
     var lastServiceStates: [ServiceID: ServiceState] = [:]
     public internal(set) var notificationStatus: NotificationAuthorization = .notDetermined
     public let login: LaunchAtLogin
+    public let devices: DevicesModel
     let snapshotDirectory: URL
     /// Asks WidgetKit to refresh; replaced in tests.
     public var reloadWidgets: () -> Void = { WidgetCenter.shared.reloadAllTimelines() }
@@ -80,6 +81,7 @@ public final class AppModel {
                 terminals: TerminalTabs? = nil,
                 notifier: Notifying? = nil,
                 appIsActive: (() -> Bool)? = nil,
+                devices: DevicesModel? = nil,
                 snapshotDirectory: URL? = nil) {
         self.settings = settings ?? SettingsStore()
         self.overrides = overrides ?? OverrideStore(fileURL: AppSettings.supportDirectory.appendingPathComponent("overrides.json"))
@@ -88,6 +90,7 @@ public final class AppModel {
         self.login = LaunchAtLogin(controller: login ?? SMLoginItem())
         self.terminals = terminals ?? TerminalTabs()
         self.notifier = notifier ?? SystemNotifier()
+        self.devices = devices ?? DevicesModel()
         self.appIsActive = appIsActive ?? { NSApp.isActive }
         self.snapshotDirectory = snapshotDirectory ?? SharedContainer.defaultDirectory
         self.processes.onChange = { [weak self] in
