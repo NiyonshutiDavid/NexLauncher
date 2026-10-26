@@ -9,6 +9,7 @@ public struct GitResult: Sendable {
 /// Runs `/usr/bin/git` with an argument array (never through a shell).
 public struct GitRunner: Sendable {
     private let extraEnvironment: [String: String]
+    var extraEnvironmentForStream: [String: String] { extraEnvironment }
 
     public init(extraEnvironment: [String: String] = [:]) {
         self.extraEnvironment = extraEnvironment
@@ -65,6 +66,86 @@ public struct GitRunner: Sendable {
                 state.fail(GitError.timeout)
             }
         }
+    }
+}
+
+extension GitRunner {
+    /// Runs git and delivers output lines (stdout and stderr combined; `\r` progress updates count as lines)
+    /// as they arrive. Cancelling the calling Task terminates git. Returns the exit status.
+    public func stream(_ args: [String], in dir: URL, onLine: @escaping @Sendable (String) -> Void) async throws -> Int32 {
+        let box = StreamBox()
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Int32, Error>) in
+                let p = Process()
+                p.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+                p.arguments = args
+                p.currentDirectoryURL = dir
+                var environment = ProcessInfo.processInfo.environment
+                environment["GIT_TERMINAL_PROMPT"] = "0"
+                environment["GIT_EDITOR"] = "true"
+                environment["LC_ALL"] = "C"
+                environment["GIT_LITERAL_PATHSPECS"] = "1"
+                environment.merge(extraEnvironmentForStream) { $1 }
+                p.environment = environment
+                let pipe = Pipe()
+                p.standardOutput = pipe
+                p.standardError = pipe
+                p.standardInput = FileHandle.nullDevice
+                box.process = p
+                box.continuation = cont
+                pipe.fileHandleForReading.readabilityHandler = { h in
+                    let d = h.availableData
+                    if d.isEmpty { h.readabilityHandler = nil; box.drained(); return }
+                    for line in box.split(d) { onLine(line) }
+                }
+                p.terminationHandler = { proc in box.exited(proc.terminationStatus) }
+                do { try p.run() } catch {
+                    pipe.fileHandleForReading.readabilityHandler = nil
+                    box.fail(GitError.commandFailed(code: -1, stderr: error.localizedDescription))
+                    return
+                }
+                if Task.isCancelled { p.terminate() }
+            }
+        } onCancel: {
+            box.cancel()
+        }
+    }
+}
+
+private final class StreamBox: @unchecked Sendable {
+    private let lock = NSLock()
+    var process: Process?
+    var continuation: CheckedContinuation<Int32, Error>?
+    private var pending = Data()
+    private var drainedFlag = false, status: Int32?
+
+    /// Splits on \n and \r, keeping any incomplete tail for the next chunk.
+    func split(_ data: Data) -> [String] {
+        lock.lock(); defer { lock.unlock() }
+        pending.append(data)
+        var lines: [String] = []
+        while let i = pending.firstIndex(where: { $0 == 0x0A || $0 == 0x0D }) {
+            let line = String(decoding: pending[pending.startIndex..<i], as: UTF8.self)
+            pending.removeSubrange(pending.startIndex...i)
+            if !line.isEmpty { lines.append(line) }
+        }
+        return lines
+    }
+    func drained() { lock.lock(); drainedFlag = true; lock.unlock(); tryFinish() }
+    func exited(_ code: Int32) { lock.lock(); status = code; lock.unlock(); tryFinish() }
+    func cancel() { lock.lock(); let p = process; lock.unlock(); if p?.isRunning == true { p?.terminate() } }
+
+    private func tryFinish() {
+        lock.lock(); defer { lock.unlock() }
+        guard drainedFlag, let status, let c = continuation else { return }
+        continuation = nil
+        c.resume(returning: status)
+    }
+    func fail(_ error: Error) {
+        lock.lock(); defer { lock.unlock() }
+        guard let c = continuation else { return }
+        continuation = nil
+        c.resume(throwing: error)
     }
 }
 

@@ -15,7 +15,7 @@ extension GitService {
         return .commandFailed(code: code, stderr: output.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 
-    private func run(_ args: [String], _ repo: URL, timeout: TimeInterval = 30) async throws {
+    func run(_ args: [String], _ repo: URL, timeout: TimeInterval = 30) async throws {
         let r = try await runner.runRaw(args, in: repo, timeout: timeout)
         guard r.code == 0 else { throw Self.classify(r.stderr.isEmpty ? r.stdout : r.stderr, code: r.code) }
     }
@@ -103,5 +103,26 @@ extension GitService {
 
     public func createBranch(_ repo: URL, named name: String) async throws {
         try await run(["switch", "-c", name], repo)
+    }
+}
+
+extension GitService {
+    public func initRepository(at dir: URL, branch: String) async throws {
+        try await run(["init", "--initial-branch=\(branch)"], dir)
+    }
+
+    /// `git clone --progress -- <url> <name>` inside `parent`, streaming output lines.
+    public func clone(url: String, into parent: URL, name: String, onLine: @escaping @Sendable (String) -> Void) async throws {
+        var collected: [String] = []
+        let lock = NSLock()
+        let code = try await runner.stream(["clone", "--progress", "--", url, name], in: parent) { line in
+            lock.lock(); collected.append(line); lock.unlock()
+            onLine(line)
+        }
+        if Task.isCancelled { throw CancellationError() }
+        guard code == 0 else {
+            lock.lock(); let text = collected.suffix(6).joined(separator: "\n"); lock.unlock()
+            throw Self.classify(text, code: code)
+        }
     }
 }
