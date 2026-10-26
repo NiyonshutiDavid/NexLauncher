@@ -8,9 +8,11 @@ public struct ProjectScanner: Sendable {
     static let maxDepth = 2
 
     private let skipNames: Set<String>
+    private let overrides: OverrideStore?
 
-    public init(skipNames: Set<String> = ProjectScanner.defaultSkips) {
+    public init(skipNames: Set<String> = ProjectScanner.defaultSkips, overrides: OverrideStore? = nil) {
         self.skipNames = skipNames
+        self.overrides = overrides
     }
 
     public func scan(root: URL) -> [Project] {
@@ -37,7 +39,7 @@ public struct ProjectScanner: Sendable {
         let real = dir.resolvingSymlinksInPath().path
         guard visited.insert(real).inserted else { return }
 
-        let found = Self.detect(in: dir)
+        let found = Self.detect(in: dir).map(finalize)
         targets.append(contentsOf: found)
         // A directory that is itself a runnable target is a leaf: don't hunt for nested apps inside it.
         guard found.isEmpty, depth < Self.maxDepth else { return }
@@ -49,6 +51,20 @@ public struct ProjectScanner: Sendable {
         where isDirectory(child) && !skipNames.contains(child.lastPathComponent) {
             collect(in: child, depth: depth + 1, visited: &visited, into: &targets)
         }
+    }
+
+
+    /// Fills the default command, then applies any user override keyed by `"<dir>|<detected kind>"`.
+    private func finalize(_ detected: ServiceTarget) -> ServiceTarget {
+        var target = detected
+        target.command = CommandBuilder.command(for: detected.kind, at: detected.directory, framework: detected.framework, flutterDevice: "macos")
+        guard let o = overrides?.override(forPath: OverrideStore.key(directory: detected.directory, kind: detected.kind)) else { return target }
+        let kind = o.kind ?? detected.kind
+        if let cmd = o.command { target.command = cmd } else if kind != detected.kind {
+            target.command = CommandBuilder.command(for: kind, at: detected.directory, framework: detected.framework, flutterDevice: "macos")
+        }
+        target.port = o.port
+        return ServiceTarget(kind: kind, directory: target.directory, framework: target.framework, command: target.command, port: target.port)
     }
 
     private func isDirectory(_ url: URL) -> Bool {

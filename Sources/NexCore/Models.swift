@@ -9,12 +9,14 @@ public struct ServiceTarget: Codable, Hashable, Sendable {
     public let directory: URL
     public let framework: String?
     public var command: String
+    public var port: Int?
 
-    public init(kind: ServiceKind, directory: URL, framework: String?, command: String) {
+    public init(kind: ServiceKind, directory: URL, framework: String?, command: String, port: Int? = nil) {
         self.kind = kind
         self.directory = directory
         self.framework = framework
         self.command = command
+        self.port = port
     }
 }
 
