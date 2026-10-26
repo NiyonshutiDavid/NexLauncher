@@ -143,3 +143,15 @@ private final class Lines: @unchecked Sendable {
         if case .authFailed = GitService.classify("fatal: Authentication failed for 'https://x/y.git/'") {} else { Issue.record("not mapped") }
     }
 }
+
+@Suite struct PartialCleanupTests {
+    @Test func doesNotRemoveAFolderThatAlreadyExisted() {
+        let existing = GitError.commandFailed(code: 128, stderr: "fatal: destination path 'x' already exists and is not an empty directory.")
+        #expect(!ProjectCreator.shouldRemovePartial(after: existing))
+    }
+    @Test func removesPartialFolderForOtherFailures() {
+        #expect(ProjectCreator.shouldRemovePartial(after: GitError.commandFailed(code: 128, stderr: "fatal: could not read from remote repository")))
+        #expect(ProjectCreator.shouldRemovePartial(after: GitError.authFailed("nope")))
+        #expect(ProjectCreator.shouldRemovePartial(after: CancellationError()))
+    }
+}

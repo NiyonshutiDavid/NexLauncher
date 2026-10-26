@@ -88,3 +88,40 @@ import NexCore
         #expect(saved.theme == .violet && saved.appearance == .dark)
     }
 }
+
+@MainActor
+@Suite struct FoldersViewStateTests {
+    @Test func refreshTokenChangesWhenTheScanRuns() async {
+        let model = Sandbox().makeModel(); model.reloadWidgets = {}
+        let before = model.refreshToken
+        await model.refresh()
+        #expect(model.refreshToken == before + 1)
+    }
+
+    @Test func foldersModeShowsOutlineEvenWithoutDetectedProjects() async throws {
+        let sb = Sandbox()
+        try FileManager.default.createDirectory(at: sb.scanRoot.appendingPathComponent("just-created"), withIntermediateDirectories: true)
+        let model = sb.makeModel(); model.reloadWidgets = {}
+        await model.refresh()
+        #expect(model.emptyState == .noProjects)                 // cards mode: nothing runnable
+        model.viewMode = .folders
+        #expect(model.emptyState == nil)                          // folders mode: the folder is listed
+    }
+
+    @Test func foldersModeWithNoFoldersAtAllIsEmpty() async throws {
+        let sb = Sandbox()
+        try FileManager.default.createDirectory(at: sb.scanRoot, withIntermediateDirectories: true)
+        let model = sb.makeModel(); model.reloadWidgets = {}
+        await model.refresh()
+        model.viewMode = .folders
+        #expect(model.emptyState == .noProjects)
+    }
+
+    @Test func isFilteringReflectsFilterSearchAndUncommitted() {
+        let model = Sandbox().makeModel()
+        #expect(!model.isFiltering)
+        model.searchText = "x"; #expect(model.isFiltering); model.searchText = ""
+        model.filter = .running; #expect(model.isFiltering); model.filter = .all
+        model.showOnlyUncommitted = true; #expect(model.isFiltering)
+    }
+}

@@ -13,9 +13,9 @@ public struct ProfileAvatar: View {
         self.size = size
     }
 
-    private var tint: Color {
-        settings.avatarColorHex.map { let c = HexColor(hex: $0); return Color(red: c.red, green: c.green, blue: c.blue) } ?? theme.accent
-    }
+    private var tintHex: HexColor { settings.avatarColorHex.map { HexColor(hex: $0) } ?? theme.palette.accent }
+    private var tint: Color { Color(red: tintHex.red, green: tintHex.green, blue: tintHex.blue) }
+    private var initialsColor: Color { let c = HexColor.bestText(on: tintHex); return Color(red: c.red, green: c.green, blue: c.blue) }
 
     public var body: some View {
         Group {
@@ -26,7 +26,7 @@ public struct ProfileAvatar: View {
                     tint
                     Text(AppSettings.initials(from: settings.displayName))
                         .font(.system(size: size * 0.4, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(initialsColor)
                 }
             }
         }

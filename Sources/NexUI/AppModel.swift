@@ -39,6 +39,8 @@ public final class AppModel {
     public var sheet: AppSheet?
     public var showOnlyUncommitted = false
     public var detailTab: DetailTab = .overview
+    /// Bumps on every completed scan so lazily loaded views (the Folders outline) know to reload.
+    public private(set) var refreshToken = 0
     /// Global git name+email present? Starts true so the CTA doesn't flash before the first check.
     public var gitIdentitySet = true
     private var hasScanned = false
@@ -102,6 +104,7 @@ public final class AppModel {
         let scanner = ProjectScanner(overrides: overrides)
         tree = await Task.detached { scanner.scanTree(root: root) }.value
         projects = tree.flatMap(\.apps)
+        refreshToken += 1
         publishSnapshot()
         hasScanned = true
         if let url = queuedURL { queuedURL = nil; await handle(url: url) }   // a widget tap that launched the app

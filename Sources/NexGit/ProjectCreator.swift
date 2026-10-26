@@ -59,6 +59,13 @@ public struct ProjectCreator: Sendable {
         return last
     }
 
+    /// A failed clone removes its half-made folder, except when git refused because the folder already existed:
+    /// then it isn't ours to delete.
+    static func shouldRemovePartial(after error: Error) -> Bool {
+        if case GitError.commandFailed(_, let stderr) = error, stderr.contains("already exists and is not an empty directory") { return false }
+        return true
+    }
+
     // MARK: - Creating
 
     public func createFolder(name: String, in parent: URL, initGit: Bool, defaultBranch: String) async throws -> URL {
@@ -86,7 +93,7 @@ public struct ProjectCreator: Sendable {
             try await git.clone(url: url.trimmingCharacters(in: .whitespacesAndNewlines), into: parent, name: folder, onLine: onLine)
             if Task.isCancelled { throw CancellationError() }
         } catch {
-            try? FileManager.default.removeItem(at: destination)         // never leave a half-cloned folder
+            if Self.shouldRemovePartial(after: error) { try? FileManager.default.removeItem(at: destination) }   // never leave a half-cloned folder
             if error is CancellationError || Task.isCancelled { throw CancellationError() }
             throw ProjectCreationError.git((error as? GitError) ?? .commandFailed(code: -1, stderr: error.localizedDescription))
         }

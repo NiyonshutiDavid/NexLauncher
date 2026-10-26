@@ -23,6 +23,12 @@ public struct HexColor: Equatable, Hashable, Sendable {
         return 0.2126 * lin(red) + 0.7152 * lin(green) + 0.0722 * lin(blue)
     }
 
+    /// White or ink, whichever reads better on `background`.
+    public static func bestText(on background: HexColor) -> HexColor {
+        let white = HexColor(hex: "#ffffff"), ink = HexColor(hex: "#0b0d12")
+        return contrast(white, background) >= contrast(ink, background) ? white : ink
+    }
+
     public static func contrast(_ a: HexColor, _ b: HexColor) -> Double {
         let (hi, lo) = a.luminance >= b.luminance ? (a, b) : (b, a)
         return (hi.luminance + 0.05) / (lo.luminance + 0.05)
@@ -33,10 +39,7 @@ public struct Palette: Equatable, Sendable {
     public let canvas, surface, fg, fg2, fg3, line: HexColor
     public let accent, accentHover, accentSoft: HexColor
     /// Text colour for content drawn on `accent`: white or ink, whichever contrasts more.
-    public var onAccent: HexColor {
-        let white = HexColor(hex: "#ffffff"), ink = HexColor(hex: "#0b0d12")
-        return HexColor.contrast(white, accent) >= HexColor.contrast(ink, accent) ? white : ink
-    }
+    public var onAccent: HexColor { HexColor.bestText(on: accent) }
 }
 
 /// Colours from nexventures.net's own stylesheet (neutrals + "ember" accent); the other themes swap only the accent family.

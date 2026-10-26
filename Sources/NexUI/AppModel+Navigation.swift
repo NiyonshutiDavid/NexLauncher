@@ -101,6 +101,11 @@ extension AppModel {
     public func refreshGitIdentity() async {
         let identity = try? await git.identity(AppSettings.realHome, scope: .global)
         gitIdentitySet = identity?.name != nil && identity?.email != nil
+        // Git's own setting is the source of truth for the default branch.
+        if let branch = await git.globalConfigValue("init.defaultBranch"), branch != settings.settings.defaultBranch {
+            settings.settings.defaultBranch = branch
+            settings.save()
+        }
     }
 
     // MARK: - Adding projects
@@ -191,7 +196,16 @@ extension AppModel {
         return filteredProjects.map { .project($0) }
     }
 
+    /// A sidebar filter, a search, or the unsaved-changes filter is narrowing what Home shows.
+    public var isFiltering: Bool {
+        filter != .all || showOnlyUncommitted || !searchText.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
     public var emptyState: EmptyStateKind? {
+        if viewMode == .folders && !isFiltering {
+            // The Folders view lists folders on disk, so it is only empty when the folder itself is.
+            return FolderTree.entries(in: settings.settings.scanRoot).isEmpty && !isScanning ? .noProjects : nil
+        }
         if projects.isEmpty { return isScanning ? nil : .noProjects }
         return homeItems.isEmpty ? .noResults : nil
     }

@@ -26,7 +26,8 @@ struct HomeView: View {
                     if let empty = model.emptyState {
                         EmptyStateView(model: model, kind: empty)
                     } else if model.viewMode == .folders {
-                        FolderOutlineView(model: model, root: model.settings.settings.scanRoot)
+                        if model.isFiltering { FilteredFolderRows(model: model) }
+                        else { FolderOutlineView(model: model, root: model.settings.settings.scanRoot) }
                     } else {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 340, maximum: 520), spacing: 20)], spacing: 20) {
                             ForEach(model.homeItems) { item in

@@ -84,4 +84,12 @@ import NexGit
     @Test func appearanceChoicesCoverAllModes() {
         #expect(Set(AppearanceMode.allCases) == [.system, .light, .dark])
     }
+
+    @Test func defaultBranchAdoptsGitsGlobalValue() async throws {
+        let (model, sb, config) = modelWithTempGlobalGit(); defer { _ = sb }
+        try "[init]\n\tdefaultBranch = master\n".write(to: config, atomically: true, encoding: .utf8)
+        #expect(model.settings.settings.defaultBranch == "main")
+        await model.refreshGitIdentity()
+        #expect(model.settings.settings.defaultBranch == "master")
+    }
 }

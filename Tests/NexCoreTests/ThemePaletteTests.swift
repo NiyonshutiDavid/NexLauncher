@@ -50,3 +50,39 @@ import Foundation
         for t in ThemeID.allCases { #expect(ThemeCatalog.displayNames[t]?.isEmpty == false) }
     }
 }
+
+@Suite struct BestTextTests {
+    @Test func graphiteDarkAccentGetsInkText() {
+        let accent = ThemeCatalog.palette(.graphite, dark: true).accent       // pale grey-blue
+        #expect(HexColor.bestText(on: accent).hexString == "#0b0d12")
+    }
+    @Test func darkBackgroundGetsWhiteText() {
+        #expect(HexColor.bestText(on: HexColor(hex: "#1d6fd6")).hexString == "#ffffff")
+    }
+    @Test(arguments: ["#cf3f0e", "#1d6fd6", "#1f7a4d", "#7c3aed", "#d97706", "#db2777", "#0f766e", "#475569"])
+    func avatarColoursAreReadable(hex: String) {
+        let bg = HexColor(hex: hex)
+        #expect(HexColor.contrast(HexColor.bestText(on: bg), bg) >= 3.0)
+    }
+    @Test func onAccentUsesTheSameRule() {
+        for t in ThemeID.allCases { for dark in [false, true] {
+            let p = ThemeCatalog.palette(t, dark: dark)
+            #expect(p.onAccent == HexColor.bestText(on: p.accent))
+        } }
+    }
+}
+
+@Suite struct ScannerEfficiencyTests {
+    @Test func everyFolderIsInspectedAtMostOncePerScan() {
+        let t = TempTree()
+        let flutter = "name: a\ndependencies:\n  flutter:\n    sdk: flutter\n"
+        for w in 1...4 { for a in 1...3 { t.write("Sessions/week\(w)/app\(a)/pubspec.yaml", flutter) } }
+        t.write("Site/package.json", TempTree.viteApp)
+        t.write("Mono/a/b/c.txt", "x")
+        let scanner = ProjectScanner()
+        let measured = scanner.scanTreeMeasured(root: t.root)
+        #expect(measured.maxDetectionsPerFolder == 1)
+        #expect(measured.nodes.map(\.id) == scanner.scanTree(root: t.root).map(\.id))
+        #expect(measured.nodes.flatMap(\.apps).count == 13)
+    }
+}

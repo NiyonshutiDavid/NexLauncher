@@ -6,17 +6,38 @@ struct FolderOutlineView: View {
     @Bindable var model: AppModel
     let root: URL
     var openPage: (FolderEntry, Project?) -> AppPage = { entry, project in project.map { .project($0.id) } ?? .folder(entry.id) }
+    @State private var entries: [FolderEntry] = []
 
     var body: some View {
         VStack(spacing: 2) {
-            ForEach(FolderTree.entries(in: root)) { entry in
+            ForEach(entries) { entry in
                 OutlineRow(model: model, entry: entry, depth: 0, openPage: openPage)
+            }
+        }
+        // Listed once and again after each scan, never while rendering.
+        .task(id: model.refreshToken) { entries = await Self.load(root) }
+    }
+
+    private static func load(_ root: URL) async -> [FolderEntry] {
+        await Task.detached { FolderTree.entries(in: root) }.value
+    }
+}
+
+/// The Folders view while a filter or search is active: only matching apps, as outline rows.
+struct FilteredFolderRows: View {
+    @Bindable var model: AppModel
+
+    var body: some View {
+        VStack(spacing: 2) {
+            ForEach(model.filteredProjects) { project in
+                OutlineRow(model: model, entry: FolderEntry(id: project.root.path, name: project.name, url: project.root, isApp: true, hasSubfolders: false),
+                           depth: 0, openPage: { _, p in p.map { .project($0.id) } ?? .folder(project.root.path) })
             }
         }
     }
 }
 
-private struct OutlineRow: View {
+struct OutlineRow: View {
     @Bindable var model: AppModel
     @Environment(\.theme) private var theme
     let entry: FolderEntry
@@ -32,7 +53,7 @@ private struct OutlineRow: View {
         VStack(spacing: 2) {
             HStack(spacing: 8) {
                 Button {
-                    if !expanded && children.isEmpty { children = FolderTree.entries(in: entry.url) }
+                    if !expanded { children = FolderTree.entries(in: entry.url) }      // fresh on every open
                     withAnimation(.easeOut(duration: 0.15)) { expanded.toggle() }
                 } label: {
                     Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(theme.fg3)
@@ -62,6 +83,7 @@ private struct OutlineRow: View {
             .padding(.leading, CGFloat(depth) * 22 + 6).padding(.trailing, 8).padding(.vertical, 5)
             .background(hovering ? theme.accentSoft.opacity(0.6) : .clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             .onHover { hovering = $0 }
+            .onChange(of: model.refreshToken) { _, _ in if expanded { children = FolderTree.entries(in: entry.url) } }
 
             if expanded {
                 ForEach(children) { child in

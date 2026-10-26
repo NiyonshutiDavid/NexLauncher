@@ -7,6 +7,14 @@ public struct FolderEntry: Identifiable, Hashable, Sendable {
     /// The folder has its own runnable manifest (package.json, manage.py, pubspec.yaml, …).
     public let isApp: Bool
     public let hasSubfolders: Bool
+
+    public init(id: String, name: String, url: URL, isApp: Bool, hasSubfolders: Bool) {
+        self.id = id
+        self.name = name
+        self.url = url
+        self.isApp = isApp
+        self.hasSubfolders = hasSubfolders
+    }
 }
 
 /// One level of the on-disk folder structure, listed lazily as the Folders view expands.
