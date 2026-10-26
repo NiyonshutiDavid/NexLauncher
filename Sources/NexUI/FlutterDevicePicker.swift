@@ -40,7 +40,7 @@ struct FlutterDevicePicker: View {
             if !idleSims.isEmpty || !devices.avds.isEmpty {
                 Divider().overlay(theme.line)
                 Text("START A DEVICE").font(.caption.weight(.bold)).tracking(0.6).foregroundStyle(theme.fg3)
-                ForEach(idleSims.prefix(4)) { sim in
+                ForEach(DeviceParsers.shortlist(idleSims, limit: 4)) { sim in
                     startRow("iphone", sim.name, sim.runtime, id: sim.udid) { Task { await devices.boot(sim); await waitForDevices(after: 4) } }
                 }
                 ForEach(devices.avds, id: \.self) { avd in
@@ -79,6 +79,7 @@ struct FlutterDevicePicker: View {
 struct FlutterDevicesPanel: View {
     @Bindable var model: AppModel
     @Environment(\.theme) private var theme
+    @State private var showAllSimulators = false
     private var devices: DevicesModel { model.devices }
 
     var body: some View {
@@ -86,11 +87,16 @@ struct FlutterDevicesPanel: View {
             SectionHeader("Devices", actionTitle: devices.isLoading ? nil : "Refresh") { Task { await devices.refresh() } }
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 320, maximum: 520), spacing: 20)], alignment: .leading, spacing: 20) {
                 card("iOS Simulators", "iphone", empty: "No simulators. Add one in Xcode → Settings → Platforms.") {
-                    ForEach(devices.simulators) { sim in
+                    let shown = showAllSimulators ? devices.simulators : DeviceParsers.shortlist(devices.simulators, limit: 6)
+                    ForEach(shown) { sim in
                         row(sim.name, sim.runtime, booted: sim.isBooted, busy: devices.busy.contains(sim.udid)) {
                             if sim.isBooted { Pill("Shut down", style: .quiet) { Task { await devices.shutdown(sim); await devices.refresh() } } }
                             else { Pill("Launch", systemImage: "play.fill") { Task { await devices.boot(sim); await devices.refresh() } } }
                         }
+                    }
+                    if devices.simulators.count > shown.count || showAllSimulators {
+                        Button(showAllSimulators ? "Show fewer" : "Show all \(devices.simulators.count) simulators") { showAllSimulators.toggle() }
+                            .buttonStyle(.plain).font(.caption.weight(.semibold)).foregroundStyle(theme.accent)
                     }
                 } isEmpty: { devices.simulators.isEmpty }
                 card("Android Emulators", "smartphone", empty: devices.androidHint ?? "No virtual devices. Create one in Android Studio → Device Manager.") {

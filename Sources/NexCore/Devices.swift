@@ -54,4 +54,13 @@ public enum DeviceParsers {
             + [home.appendingPathComponent("Library/Android/sdk")]
         return candidates.first { FileManager.default.fileExists(atPath: $0.appendingPathComponent("emulator/emulator").path) }
     }
+
+    /// The simulators worth showing first: booted ones, then those on the newest iOS runtime, up to `limit`.
+    public static func shortlist(_ sims: [SimulatorDevice], limit: Int) -> [SimulatorDevice] {
+        func version(_ runtime: String) -> [Int] { runtime.split(whereSeparator: { !$0.isNumber }).compactMap { Int($0) } }
+        let newest = sims.map(\.runtime).max { version($0).lexicographicallyPrecedes(version($1)) }
+        let booted = sims.filter(\.isBooted)
+        let latest = sims.filter { !$0.isBooted && $0.runtime == newest }
+        return Array((booted + latest).prefix(limit))
+    }
 }

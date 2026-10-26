@@ -45,3 +45,21 @@ import Foundation
         #expect(DeviceParsers.displayName(forAVD: "Medium_Phone_API_35") == "Medium Phone API 35")
     }
 }
+
+@Suite struct SimulatorShortlistTests {
+    private func sim(_ name: String, _ runtime: String, booted: Bool = false) -> SimulatorDevice {
+        SimulatorDevice(udid: name + runtime, name: name, runtime: runtime, isBooted: booted)
+    }
+
+    @Test func shortlistIsBootedPlusTheNewestRuntimeCapped() {
+        let all = [sim("iPhone 16", "iOS 18.5", booted: true), sim("iPhone 16 Pro", "iOS 18.5"),
+                   sim("iPhone 17", "iOS 26.0"), sim("iPhone 17 Pro", "iOS 26.0"), sim("iPhone Air", "iOS 26.0")]
+        let short = DeviceParsers.shortlist(all, limit: 3)
+        #expect(short.map(\.name) == ["iPhone 16", "iPhone 17", "iPhone 17 Pro"])
+    }
+
+    @Test func newestRuntimeComparesVersionsNumerically() {
+        let all = [sim("A", "iOS 9.3"), sim("B", "iOS 18.5"), sim("C", "iOS 26.0")]
+        #expect(DeviceParsers.shortlist(all, limit: 5).map(\.name) == ["C"])
+    }
+}
