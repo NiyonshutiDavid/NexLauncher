@@ -37,13 +37,17 @@ struct AIPage: View {
                 if !model.agentRuns.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         SectionHeader("Runs")
-                        ForEach(model.agentRuns) { AgentRunCard(model: model, run: $0) }
+                        ForEach(model.agentRuns) { run in
+                            AgentRunCard(model: model, run: run)
+                                .transition(.move(edge: .top).combined(with: .opacity))
+                        }
                     }
                 }
             }
             .padding(32)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .animation(.spring(duration: 0.4), value: model.agentRuns.map(\.id))
         .navigationTitle("AI Assistant")
         .onAppear {
             agent = model.settings.settings.defaultAgent
@@ -96,7 +100,8 @@ struct AIPage: View {
                     .background(theme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(agent == kind ? theme.accent : theme.line, lineWidth: agent == kind ? 2 : 1))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressableStyle())
+                .hoverLift()
             }
         }
     }
@@ -173,6 +178,7 @@ struct AgentRunCard: View {
     @Bindable var run: AgentRun
     @Environment(\.theme) private var theme
     @State private var expanded = false
+    @State private var reply = ""
 
     var body: some View {
         CardSurface {
@@ -189,12 +195,30 @@ struct AgentRunCard: View {
                     Spacer()
                     statusBadge
                 }
-                Text(run.task).font(.callout).foregroundStyle(theme.fg2).lineLimit(expanded ? nil : 2)
+                // The conversation: your message, then the agent's answer.
+                HStack(alignment: .top, spacing: 8) {
+                    if run.parentID != nil { Image(systemName: "arrowshape.turn.up.left.fill").font(.caption).foregroundStyle(theme.fg3) }
+                    Text(run.task.components(separatedBy: "Follow-up:\n\n").last ?? run.task)
+                        .font(.callout).foregroundStyle(theme.onAccent).lineLimit(expanded ? nil : 3)
+                        .padding(.horizontal, 12).padding(.vertical, 8)
+                        .background(theme.accent, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .frame(maxWidth: .infinity, alignment: .trailing)
                 VStack(alignment: .leading, spacing: 5) {
                     ForEach(Array(visibleEvents.enumerated()), id: \.offset) { _, event in eventRow(event) }
                 }
                 .padding(10).frame(maxWidth: .infinity, alignment: .leading)
                 .background(theme.canvas, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                if !run.isRunning, let answer = run.answer, !answer.isEmpty {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: run.agent.symbol).font(.caption).foregroundStyle(theme.accent).frame(width: 18)
+                        Text(answer).font(.callout).foregroundStyle(theme.fg).textSelection(.enabled)
+                            .lineLimit(expanded ? nil : 8)
+                    }
+                    .padding(12).frame(maxWidth: .infinity, alignment: .leading)
+                    .background(theme.accentSoft, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
                 HStack(spacing: 10) {
                     if run.events.count > 6 { Button(expanded ? "Show less" : "Show all \(run.events.count) steps") { expanded.toggle() }.buttonStyle(.plain).font(.caption).foregroundStyle(theme.accent) }
                     if let cost = run.costUSD { Text(String(format: "$%.3f", cost)).font(.caption).foregroundStyle(theme.fg3) }
@@ -207,9 +231,26 @@ struct AgentRunCard: View {
                         }
                     }
                 }
+                if !run.isRunning {
+                    HStack(spacing: 8) {
+                        TextField("Reply to \(run.agent.displayName)…", text: $reply, axis: .vertical)
+                            .textFieldStyle(.plain).lineLimit(1...4)
+                            .padding(.horizontal, 12).padding(.vertical, 8)
+                            .background(theme.canvas, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .onSubmit(send)
+                        Pill("Send", systemImage: "paperplane.fill") { send() }
+                            .opacity(reply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.4 : 1)
+                    }
+                }
             }
             .padding(18)
+            .animation(.spring(duration: 0.35), value: run.status)
         }
+    }
+
+    private func send() {
+        guard model.continueAgent(run, message: reply) != nil else { return }
+        reply = ""
     }
 
     private var visibleEvents: [AgentEvent] { expanded ? run.events : Array(run.events.suffix(6)) }

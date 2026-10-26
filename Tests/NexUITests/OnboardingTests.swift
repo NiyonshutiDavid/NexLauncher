@@ -34,8 +34,8 @@ import NexGit
         ob.back(); #expect(ob.step == .welcome)
         for _ in 0..<10 { ob.name = "David"; ob.next() }
         #expect(ob.step == .extras && ob.isLast)
-        ob.back(); #expect(ob.step == .look)
-        #expect(OnboardingStep.allCases.count == 6)
+        ob.back(); #expect(ob.step == .ai)
+        #expect(OnboardingStep.allCases.count == 7)
     }
 
     @Test func nameStepNeedsAName() {
@@ -72,12 +72,14 @@ import NexGit
         ob.gitName = "Dave N"; ob.gitEmail = "dave@nexventures.net"
         ob.theme = .forest; ob.appearance = .dark
         ob.notifications = true; ob.launchAtLogin = true
+        ob.defaultAgent = .codex; ob.autonomy = .plan
         await ob.finish()
         let s = model.settings.settings
         #expect(s.displayName == "Dave" && s.scanRoot == sb.scanRoot)
         #expect(s.theme == .forest && s.appearance == .dark)
         #expect(s.notificationsEnabled && s.onboardingCompleted)
         #expect(model.login.isEnabled)
+        #expect(s.defaultAgent == .codex && s.agentAutonomy == .plan)
         let snap = await model.loadGitSettings()
         #expect(snap.name == "Dave N" && snap.email == "dave@nexventures.net")
         #expect(model.projects.map(\.name) == ["Site"])                // rescanned

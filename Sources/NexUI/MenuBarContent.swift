@@ -105,10 +105,12 @@ private struct QuickRow: View {
         let port = model.runningPorts(for: project).first
         HStack(spacing: 10) {
             IconTile(name: project.name, glyph: ProjectGlyph.symbol(for: project), size: 34)
+                .overlay(alignment: .bottomTrailing) { if running { PulsingDot(color: .green, size: 7).offset(x: 2, y: 2) } }
             VStack(alignment: .leading, spacing: 1) {
                 Text(project.name).font(.callout.weight(.semibold)).foregroundStyle(theme.fg).lineLimit(1)
                 Text(running ? (port.map { "Running · localhost:\($0)" } ?? "Starting…") : ProjectSubtitle.text(for: project))
                     .font(.caption).foregroundStyle(running ? Color.green : theme.fg2).lineLimit(1)
+                    .contentTransition(.opacity)
             }
             Spacer(minLength: 6)
             if let port {

@@ -52,7 +52,7 @@ struct ServiceStatusList: View {
             VStack(alignment: .leading, spacing: 6) {
                 ForEach(rows, id: \.0) { id, state in
                     HStack(spacing: 8) {
-                        Circle().fill(color(state)).frame(width: 8, height: 8)
+                        if case .running = state { PulsingDot(color: .green) } else { Circle().fill(color(state)).frame(width: 8, height: 8) }
                         Text(title(for: id)).font(.callout.weight(.medium)).foregroundStyle(theme.fg)
                         Text(label(state)).font(.callout).foregroundStyle(theme.fg2).lineLimit(1)
                         Spacer()

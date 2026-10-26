@@ -97,7 +97,10 @@ struct TaskComposer: View {
     }
 
     private func add() {
-        guard let target, model.addTask(title: title, notes: notes, project: target) != nil else { return }
+        guard let target else { return }
+        var added: ProjectTask?
+        withAnimation(.spring(duration: 0.4)) { added = model.addTask(title: title, notes: notes, project: target) }
+        guard added != nil else { return }
         title = ""
         notes = ""
     }
@@ -116,6 +119,7 @@ struct TaskList: View {
                     Button { withAnimation(.spring(duration: 0.3)) { model.setTaskDone(task, !task.isDone) } } label: {
                         Image(systemName: task.isDone ? "checkmark.circle.fill" : "circle")
                             .font(.title3).foregroundStyle(task.isDone ? theme.accent : theme.fg3)
+                            .contentTransition(.symbolEffect(.replace))
                     }
                     .buttonStyle(.plain)
                     VStack(alignment: .leading, spacing: 3) {
@@ -136,6 +140,7 @@ struct TaskList: View {
                 .padding(14)
                 .background(theme.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(theme.line.opacity(0.7)))
+                .transition(.asymmetric(insertion: .move(edge: .top).combined(with: .opacity), removal: .opacity))
                 .contextMenu {
                     Button(task.isDone ? "Mark as not done" : "Mark as done") { model.setTaskDone(task, !task.isDone) }
                     Button("Delete", role: .destructive) { model.deleteTask(task) }

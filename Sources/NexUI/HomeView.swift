@@ -80,11 +80,15 @@ struct HomeView: View {
                         else { FolderOutlineView(model: model, root: model.settings.settings.scanRoot) }
                     } else {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 340, maximum: 520), spacing: 20)], spacing: 20) {
-                            ForEach(model.homeItems) { item in
-                                switch item {
-                                case .project(let project): ProjectCard(model: model, project: project)
-                                case .collection(let node): CollectionCard(model: model, node: node)
+                            ForEach(Array(model.homeItems.enumerated()), id: \.element.id) { index, item in
+                                Group {
+                                    switch item {
+                                    case .project(let project): ProjectCard(model: model, project: project)
+                                    case .collection(let node): CollectionCard(model: model, node: node)
+                                    }
                                 }
+                                .hoverLift()
+                                .appearAnimation(index: index)
                             }
                         }
                     }

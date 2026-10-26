@@ -24,7 +24,10 @@ private struct RootContent: View {
                 .toolbar(removing: .sidebarToggle)            // WhatsApp-style: only the window controls up there
         } detail: {
             page
+                .id(pageKey)
+                .transition(.opacity.combined(with: .offset(x: 18)))
                 .background(theme.canvas)
+                .animation(.smooth(duration: 0.3), value: pageKey)
         }
         .overlay {
             if model.showOnboarding { OnboardingView(model: model).transition(.opacity) }
@@ -38,6 +41,9 @@ private struct RootContent: View {
         }
         .sheet(item: $model.setup) { session in SetupSheet(model: model, session: session) }
     }
+
+    /// Changes when the page (or the sidebar section) changes, so the detail fades and slides in.
+    private var pageKey: String { "\(model.page)|\(model.filter.rawValue)|\(model.showOnlyUncommitted)" }
 
     @ViewBuilder private var page: some View {
         switch model.page {

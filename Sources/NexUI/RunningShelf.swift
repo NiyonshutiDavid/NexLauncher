@@ -33,6 +33,8 @@ struct RunningShelf: View {
                                 .padding(14)
                             }
                             .frame(width: 340)
+                            .hoverLift()
+                            .transition(.scale(scale: 0.92).combined(with: .opacity))
                             .onTapGesture { model.page = .project(project.id); model.detailTab = .logs }
                         }
                     }

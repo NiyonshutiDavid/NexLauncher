@@ -3,7 +3,7 @@ import Observation
 import NexCore
 
 public enum OnboardingStep: Int, CaseIterable, Sendable {
-    case welcome, name, projects, git, look, extras
+    case welcome, name, projects, git, look, ai, extras
 
     var illustration: IllustrationKind {
         switch self {
@@ -12,6 +12,7 @@ public enum OnboardingStep: Int, CaseIterable, Sendable {
         case .projects: return .folders
         case .git: return .branchGraph
         case .look: return .swatches
+        case .ai: return .robot
         case .extras: return .widgets
         }
     }
@@ -29,9 +30,11 @@ public final class OnboardingModel {
     public var appearance: AppearanceMode
     public var notifications = false
     public var launchAtLogin = false
+    public var defaultAgent: AgentKind
+    public var autonomy: AgentAutonomy
     public private(set) var detectedCount: Int?
     public private(set) var isFinishing = false
-    private let model: AppModel
+    let model: AppModel
 
     public init(model: AppModel) {
         self.model = model
@@ -39,6 +42,8 @@ public final class OnboardingModel {
         folder = model.settings.settings.scanRoot
         theme = model.settings.settings.theme
         appearance = model.settings.settings.appearance
+        defaultAgent = model.settings.settings.defaultAgent
+        autonomy = model.settings.settings.agentAutonomy
     }
 
     public var folderExists: Bool {
@@ -90,6 +95,8 @@ public final class OnboardingModel {
         model.settings.settings.scanRoot = folder
         model.settings.settings.theme = theme
         model.settings.settings.appearance = appearance
+        model.settings.settings.defaultAgent = defaultAgent
+        model.settings.settings.agentAutonomy = autonomy
         model.settings.save()
         let gn = gitName.trimmingCharacters(in: .whitespaces), ge = gitEmail.trimmingCharacters(in: .whitespaces)
         if !gn.isEmpty && !ge.isEmpty { try? await model.saveGitIdentity(name: gn, email: ge) }

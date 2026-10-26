@@ -39,7 +39,8 @@ struct OnboardingView: View {
                 .background(LinearGradient(colors: [theme.accentSoft, theme.surface], startPoint: .top, endPoint: .bottom))
 
                 VStack(alignment: .leading, spacing: 18) {
-                    content.id(ob.step).transition(.opacity)
+                    content.id(ob.step)
+                        .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .move(edge: .leading).combined(with: .opacity)))
                     Spacer(minLength: 0)
                     footer
                 }
@@ -52,7 +53,7 @@ struct OnboardingView: View {
             .overlay(RoundedRectangle(cornerRadius: 30, style: .continuous).strokeBorder(theme.line, lineWidth: 1))
             .shadow(color: .black.opacity(theme.dark ? 0.5 : 0.14), radius: 40, y: 18)
         }
-        .animation(.easeInOut(duration: 0.25), value: ob.step)
+        .animation(.spring(duration: 0.45, bounce: 0.18), value: ob.step)
         .task { await ob.loadExisting() }
     }
 
@@ -62,11 +63,13 @@ struct OnboardingView: View {
         switch ob.step {
         case .welcome:
             title("Welcome to NexLauncher", "Run, manage and ship all your Nexventures projects from one place.")
-            VStack(alignment: .leading, spacing: 12) {
-                bullet("play.circle.fill", "Start any frontend, backend or Flutter app with one click")
-                bullet("terminal.fill", "A real terminal inside every project folder")
-                bullet("arrow.triangle.branch", "Commit, pull and push without leaving the app")
-                bullet("pin.fill", "Pin favourites to the menu bar, the Dock and your desktop widget")
+            VStack(alignment: .leading, spacing: 11) {
+                bullet("play.circle.fill", "Runs any stack — Node, Python, Go, Rust, PHP, Rails, Flutter and more — with one click")
+                bullet("sparkles", "An AI assistant: hand tasks to Claude Code, Codex, Gemini or Antigravity")
+                bullet("checklist", "Tasks for every project, with finished ones in your desktop widget")
+                bullet("iphone", "Launch iOS simulators and Android emulators for your Flutter apps")
+                bullet("arrow.triangle.branch", "Commit, pull and push — and a real terminal in every folder")
+                bullet("bolt.horizontal.circle.fill", "Running and pinned projects in the menu bar, or anywhere with \(AppModel.quickPanelShortcutLabel)")
             }
         case .name:
             title("What should we call you?", "It appears in your greeting and on your profile.")
@@ -115,11 +118,37 @@ struct OnboardingView: View {
                     ThemeSwatchCard(id: id, selected: ob.theme == id) { ob.theme = id; model.setTheme(id) }
                 }
             }
+        case .ai:
+            title("Meet your AI assistant", "Pick the agent NexLauncher uses by default and how much it may do on its own. You can sign in from the AI page.")
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 10)], spacing: 10) {
+                ForEach(AgentKind.allCases.filter { $0 != .custom }) { kind in
+                    let status = model.agents.status(kind)
+                    Button { ob.defaultAgent = kind } label: {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Image(systemName: kind.symbol).foregroundStyle(ob.defaultAgent == kind ? theme.onAccent : theme.accent)
+                                .frame(width: 30, height: 30)
+                                .background(ob.defaultAgent == kind ? theme.accent : theme.accentSoft, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            Text(kind.displayName).font(.callout.weight(.semibold)).foregroundStyle(theme.fg)
+                            Text(status.installed ? "Installed" : "Not installed").font(.caption).foregroundStyle(status.installed ? Color.green : theme.fg3)
+                        }
+                        .padding(12).frame(maxWidth: .infinity, alignment: .leading)
+                        .background(theme.canvas, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(ob.defaultAgent == kind ? theme.accent : theme.line, lineWidth: ob.defaultAgent == kind ? 2 : 1))
+                    }
+                    .buttonStyle(PressableStyle())
+                }
+            }
+            .task { await model.agents.refresh() }
+            Picker("", selection: $ob.autonomy) {
+                ForEach(AgentAutonomy.allCases, id: \.self) { Text($0.title).tag($0) }
+            }
+            .pickerStyle(.segmented).labelsHidden().frame(maxWidth: 360)
+            Text(ob.autonomy.explanation).font(.caption).foregroundStyle(theme.fg2)
         case .extras:
             title("Stay in the loop", "Two optional things that make NexLauncher feel at home.")
             Toggle("Notify me when a service is ready or stops unexpectedly", isOn: $ob.notifications)
             Toggle("Open NexLauncher when I log in", isOn: $ob.launchAtLogin)
-            Text("Tip: pin a project with the pin button to see it in the menu bar, the Dock menu and the Quick Launch widget.")
+            Text("Tip: pin a project to see it in the menu bar, the Dock menu and the Quick Launch widget. Add the Running Services and Tasks widgets from your desktop's Edit Widgets.")
                 .font(.callout).foregroundStyle(theme.fg2)
         }
     }

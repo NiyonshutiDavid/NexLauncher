@@ -16,7 +16,7 @@ struct CTACardView: View {
                     Pill(cta.button, action: onAction)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                IllustrationView(cta.illustration).frame(width: 130, height: 130)
+                AnimatedIllustration(kind: cta.illustration, amplitude: 3).frame(width: 130, height: 130)
             }
             .padding(20)
             IconButton("xmark", help: "Dismiss", action: onDismiss).padding(10)
@@ -41,7 +41,9 @@ struct CTAShelf: View {
                     ForEach(items) { cta in
                         CTACardView(cta: cta,
                                     onAction: { Task { await model.perform(cta.id) } },
-                                    onDismiss: { withAnimation { model.dismiss(cta.id) } })
+                                    onDismiss: { withAnimation(.spring(duration: 0.35)) { model.dismiss(cta.id) } })
+                            .hoverLift()
+                            .transition(.scale(scale: 0.9).combined(with: .opacity))
                     }
                 }
                 .padding(.vertical, 6)

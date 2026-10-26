@@ -61,6 +61,7 @@ struct HeroBanner: View {
         }
         .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous).strokeBorder(theme.line.opacity(theme.dark ? 1 : 0.7), lineWidth: 1))
         .shadow(color: .black.opacity(theme.dark ? 0 : 0.05), radius: 14, y: 6)
+        .appearAnimation()
     }
 }
 

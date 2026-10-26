@@ -118,7 +118,7 @@ public struct Pill: View {
     }
 
     public var body: some View {
-        Button(action: action) { PillLabel(title, style: style, systemImage: systemImage) }.buttonStyle(.plain)
+        Button(action: action) { PillLabel(title, style: style, systemImage: systemImage) }.buttonStyle(PressableStyle())
     }
 }
 
@@ -204,5 +204,60 @@ public struct SectionHeader: View {
                 Button(actionTitle, action: action).buttonStyle(.plain).foregroundStyle(theme.accent).font(.callout.weight(.medium))
             }
         }
+    }
+}
+
+// MARK: - Motion
+
+/// Fades and lifts content in when it first appears; `index` staggers items in a grid.
+private struct AppearAnimation: ViewModifier {
+    let index: Int
+    @State private var shown = false
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown ? 1 : 0)
+            .offset(y: shown ? 0 : 14)
+            .scaleEffect(shown ? 1 : 0.98)
+            .onAppear {
+                withAnimation(.spring(duration: 0.5, bounce: 0.2).delay(Double(min(index, 12)) * 0.035)) { shown = true }
+            }
+    }
+}
+
+/// Cards lift slightly under the pointer.
+private struct HoverLift: ViewModifier {
+    @State private var hovering = false
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(hovering ? 1.012 : 1)
+            .shadow(color: .black.opacity(hovering ? 0.10 : 0), radius: hovering ? 18 : 0, y: hovering ? 8 : 0)
+            .animation(.spring(duration: 0.3, bounce: 0.25), value: hovering)
+            .onHover { hovering = $0 }
+    }
+}
+
+extension View {
+    func appearAnimation(index: Int = 0) -> some View { modifier(AppearAnimation(index: index)) }
+    func hoverLift() -> some View { modifier(HoverLift()) }
+}
+
+/// Buttons that dip when pressed.
+struct PressableStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.95 : 1)
+            .animation(.spring(duration: 0.2, bounce: 0.3), value: configuration.isPressed)
+    }
+}
+
+/// A status dot that breathes while something is live.
+struct PulsingDot: View {
+    let color: Color
+    var size: CGFloat = 8
+    @State private var pulse = false
+    var body: some View {
+        Circle().fill(color).frame(width: size, height: size)
+            .background(Circle().fill(color.opacity(0.35)).scaleEffect(pulse ? 2.4 : 1).opacity(pulse ? 0 : 1))
+            .onAppear { withAnimation(.easeOut(duration: 1.4).repeatForever(autoreverses: false)) { pulse = true } }
     }
 }

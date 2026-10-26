@@ -27,6 +27,7 @@ struct PinnedShelf: View {
                                 .padding(14)
                             }
                             .frame(width: 340)
+                            .hoverLift()
                             .onTapGesture { model.page = .project(project.id); model.detailTab = .overview }
                         }
                     }

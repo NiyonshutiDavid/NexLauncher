@@ -73,6 +73,8 @@ struct SidebarView: View {
             Divider().overlay(theme.line)
             ProfileRow(model: model)
         }
+        .animation(.spring(duration: 0.3, bounce: 0.2), value: model.page)
+        .animation(.spring(duration: 0.3, bounce: 0.2), value: model.filter)
     }
 }
 
