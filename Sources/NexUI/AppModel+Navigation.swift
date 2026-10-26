@@ -2,9 +2,10 @@ import Foundation
 import NexCore
 import NexGit
 import NexTerminal
+import AppKit
 
 public enum SettingsSection: String, CaseIterable, Identifiable, Sendable {
-    case profile = "Profile", git = "Git", appearance = "Appearance", general = "General", projects = "Projects"
+    case profile = "Profile", git = "Git", appearance = "Appearance", notifications = "Notifications", general = "General", projects = "Projects"
     public var id: String { rawValue }
 }
 
@@ -31,6 +32,12 @@ public enum AppSheet: Identifiable, Equatable, Sendable {
 }
 
 extension AppModel {
+    /// Brings the main window forward, reopening it if every window was closed.
+    public func showMainWindow() {
+        if !NSApp.windows.contains(where: { $0.isVisible && $0.canBecomeMain }) { openMainWindowAction?() }
+        NSApp.activate()
+    }
+
     // MARK: - View mode
 
     public var viewMode: ViewMode {
@@ -115,6 +122,7 @@ extension AppModel {
         let url = try await ProjectCreator(git: git).createFolder(
             name: name, in: parent, initGit: initGit, defaultBranch: settings.settings.defaultBranch)
         await finishAdding(url)
+        post(.projectAdded(name: url.lastPathComponent, path: url.path, cloned: false))
         return url
     }
 
@@ -122,6 +130,7 @@ extension AppModel {
     public func cloneProject(url: String, name: String, in parent: URL, onLine: @escaping @Sendable (String) -> Void) async throws -> URL {
         let folder = try await ProjectCreator(git: git).clone(url: url, name: name, in: parent, onLine: onLine)
         await finishAdding(folder)
+        post(.projectAdded(name: folder.lastPathComponent, path: folder.path, cloned: true))
         return folder
     }
 

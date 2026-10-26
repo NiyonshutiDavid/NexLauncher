@@ -20,6 +20,7 @@ struct SettingsPage: View {
         case .profile: return "person.crop.circle"
         case .git: return "arrow.triangle.branch"
         case .appearance: return "paintpalette"
+        case .notifications: return "bell"
         case .general: return "gearshape"
         case .projects: return "square.grid.2x2"
         }
@@ -51,6 +52,7 @@ struct SettingsPage: View {
                     case .profile: ProfileSection(model: model)
                     case .git: GitSection(model: model)
                     case .appearance: AppearanceSection(model: model)
+                    case .notifications: NotificationsSection(model: model)
                     case .general: GeneralSection(model: model)
                     case .projects: ProjectsSection(model: model)
                     }
@@ -279,6 +281,50 @@ private struct ThemeSwatchCard: View {
             .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(selected ? theme.accent : theme.line, lineWidth: selected ? 2 : 1))
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Notifications
+
+private struct NotificationsSection: View {
+    @Bindable var model: AppModel
+    @Environment(\.theme) private var theme
+
+    private func binding(_ keyPath: WritableKeyPath<AppSettings, Bool>) -> Binding<Bool> {
+        Binding(get: { model.settings.settings[keyPath: keyPath] },
+                set: { model.settings.settings[keyPath: keyPath] = $0; model.settings.save() })
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            SettingsCard("Notifications", footer: "NexLauncher asks macOS for permission the first time you turn this on.") {
+                Toggle("Notify me about my projects", isOn: Binding(
+                    get: { model.settings.settings.notificationsEnabled },
+                    set: { on in Task { await model.setNotificationsEnabled(on) } }))
+                if model.notificationStatus == .denied {
+                    HStack {
+                        Label("macOS is blocking notifications for NexLauncher.", systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                        Spacer()
+                        Pill("Open System Settings", style: .quiet) {
+                            if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") { NSWorkspace.shared.open(url) }
+                        }
+                    }
+                }
+            }
+            SettingsCard("What to tell me") {
+                Toggle("A service is ready (its port is up)", isOn: binding(\.notifyReady))
+                Toggle("A service stopped unexpectedly", isOn: binding(\.notifyCrash))
+                Toggle("A project was created or cloned", isOn: binding(\.notifyAdded))
+                Divider().overlay(theme.line)
+                Toggle("Only when NexLauncher isn't in front", isOn: binding(\.notifyOnlyInBackground))
+            }
+            .disabled(!model.settings.settings.notificationsEnabled)
+            .opacity(model.settings.settings.notificationsEnabled ? 1 : 0.5)
+            SettingsCard("Try it") {
+                Pill("Send a test notification", style: .quiet) { Task { await model.sendTestNotification() } }
+            }
+        }
+        .task { await model.refreshNotificationStatus() }
     }
 }
 

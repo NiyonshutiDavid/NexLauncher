@@ -1,11 +1,13 @@
 import SwiftUI
 import AppKit
 import NexUI
+import UserNotifications
 
 @main
 struct NexLauncherApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     private var model: AppModel { delegate.model }
+    @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
         WindowGroup("NexLauncher", id: "main") {
@@ -13,6 +15,7 @@ struct NexLauncherApp: App {
                 .frame(minWidth: 960, minHeight: 640)
                 .onOpenURL { url in Task { await model.handle(url: url) } }
                 .task {
+                    model.openMainWindowAction = { openWindow(id: "main") }
                     model.applyDockIconPolicy()
                     await model.refresh()
                 }
@@ -35,14 +38,12 @@ struct NexLauncherApp: App {
 /// ⌘, opens Settings inside the main window, reopening the window if it was closed.
 struct SettingsCommands: Commands {
     let model: AppModel
-    @Environment(\.openWindow) private var openWindow
 
     var body: some Commands {
         CommandGroup(replacing: .appSettings) {
             Button("Settings…") {
                 model.page = .settings(.general)
-                if !NSApp.windows.contains(where: { $0.isVisible && $0.canBecomeMain }) { openWindow(id: "main") }
-                NSApp.activate()
+                model.showMainWindow()
             }
             .keyboardShortcut(",", modifiers: .command)
         }
@@ -50,9 +51,32 @@ struct SettingsCommands: Commands {
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     /// Owned here (not by a window) so Quit can always see running services and terminals, even with no window open.
     let model = AppModel()
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        guard Bundle.main.bundleURL.pathExtension == "app" else { return }
+        UNUserNotificationCenter.current().delegate = self
+        (model.notifier as? SystemNotifier)?.registerCategories()
+        Task { await model.refreshNotificationStatus() }
+    }
+
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
+        [.banner, .sound]
+    }
+
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+        let info = response.notification.request.content.userInfo
+        let projectID = info["projectID"] as? String
+        let url = (info["openURL"] as? String).flatMap(URL.init(string:))
+        let action = response.actionIdentifier
+        await MainActor.run {
+            if action == SystemNotifier.openBrowserAction, let url { NSWorkspace.shared.open(url); return }
+            if let projectID { model.openFromNotification(projectID: projectID) }
+            model.showMainWindow()
+        }
+    }
 
     /// Right-clicking the Dock icon lists pinned projects with one-click Run/Stop.
     func applicationDockMenu(_ sender: NSApplication) -> NSMenu? {

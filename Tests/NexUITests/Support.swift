@@ -10,7 +10,18 @@ final class FakeLogin: LoginItemControlling, @unchecked Sendable {
     func setEnabled(_ on: Bool) throws { isEnabled = on }
 }
 
+final class FakeNotifier: Notifying, @unchecked Sendable {
+    var status: NotificationAuthorization = .notDetermined
+    var grantOnRequest = true
+    private(set) var posted: [NotificationRequest] = []
+    func authorizationStatus() async -> NotificationAuthorization { status }
+    func requestAuthorization() async -> Bool { status = grantOnRequest ? .authorized : .denied; return grantOnRequest }
+    func post(_ request: NotificationRequest) async { posted.append(request) }
+}
+
 final class Sandbox {
+    let notifier = FakeNotifier()
+    var appIsActive = false
     let root: URL
     init() {
         root = FileManager.default.temporaryDirectory.appendingPathComponent("nexui-\(UUID().uuidString)")
@@ -35,6 +46,8 @@ final class Sandbox {
                         processes: ProcessManager(killTimeout: 0.5),
                         git: GitService(),
                         login: FakeLogin(),
+                        notifier: notifier,
+                        appIsActive: { [unowned self] in self.appIsActive },
                         snapshotDirectory: root.appendingPathComponent("shared"))
     }
 

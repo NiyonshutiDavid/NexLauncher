@@ -5,6 +5,7 @@ import NexCore
 import NexProcess
 import NexGit
 import NexTerminal
+import AppKit
 
 public struct GitBadge: Equatable, Sendable {
     public var changes = 0, ahead = 0, behind = 0, repoCount = 0
@@ -54,6 +55,12 @@ public final class AppModel {
     public let processes: ProcessManager
     public let git: GitService
     public let terminals: TerminalTabs
+    public let notifier: Notifying
+    /// Set by the app so any part of it (menu bar, Dock menu, notifications) can bring the main window back.
+    public var openMainWindowAction: (() -> Void)?
+    let appIsActive: () -> Bool
+    var lastServiceStates: [ServiceID: ServiceState] = [:]
+    public internal(set) var notificationStatus: NotificationAuthorization = .notDetermined
     public let login: LaunchAtLogin
     let snapshotDirectory: URL
     /// Asks WidgetKit to refresh; replaced in tests.
@@ -65,6 +72,8 @@ public final class AppModel {
                 git: GitService = GitService(),
                 login: LoginItemControlling? = nil,
                 terminals: TerminalTabs? = nil,
+                notifier: Notifying? = nil,
+                appIsActive: (() -> Bool)? = nil,
                 snapshotDirectory: URL? = nil) {
         self.settings = settings ?? SettingsStore()
         self.overrides = overrides ?? OverrideStore(fileURL: AppSettings.supportDirectory.appendingPathComponent("overrides.json"))
@@ -72,8 +81,13 @@ public final class AppModel {
         self.git = git
         self.login = LaunchAtLogin(controller: login ?? SMLoginItem())
         self.terminals = terminals ?? TerminalTabs()
+        self.notifier = notifier ?? SystemNotifier()
+        self.appIsActive = appIsActive ?? { NSApp.isActive }
         self.snapshotDirectory = snapshotDirectory ?? SharedContainer.defaultDirectory
-        self.processes.onChange = { [weak self] in self?.publishSnapshot() }
+        self.processes.onChange = { [weak self] in
+            self?.publishSnapshot()
+            self?.processStatesChanged()
+        }
     }
 
     public var greeting: String {

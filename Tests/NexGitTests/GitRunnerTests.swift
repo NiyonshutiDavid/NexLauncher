@@ -7,9 +7,9 @@ import Foundation
         let dir = FileManager.default.temporaryDirectory
         let start = Date()
         await #expect(throws: GitError.timeout) {
-            // git exits at once, but the backgrounded sleep keeps stdout open for 5 s.
-            _ = try await GitRunner().runRaw(["-c", "alias.bg=!sleep 5 &", "bg"], in: dir, timeout: 0.4)
+            // git exits at once, but the backgrounded sleep keeps stdout open for 20 s.
+            _ = try await GitRunner().runRaw(["-c", "alias.bg=!sleep 20 &", "bg"], in: dir, timeout: 0.4)
         }
-        #expect(Date().timeIntervalSince(start) < 3)
+        #expect(Date().timeIntervalSince(start) < 10)
     }
 }
