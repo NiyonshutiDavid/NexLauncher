@@ -169,3 +169,24 @@ private let prefsOn = NotificationPrefs(enabled: true, ready: true, crash: true,
         #expect(model.page == .project(project.id))             // unknown ids are ignored
     }
 }
+
+@MainActor
+@Suite(.serialized) struct InstallNotificationTests {
+    @Test func installingDoesNotInheritTheConfiguredPortOrAnnounceReady() async {
+        let sb = Sandbox(); defer { _ = sb }
+        sb.write("Site/package.json", #"{"scripts":{"dev":"sleep 30"},"devDependencies":{"vite":"5"}}"#)
+        let model = sb.makeModel(); model.reloadWidgets = {}
+        await model.refresh()
+        let t = model.projects[0].targets[0]
+        model.overrides.set(Override(command: "sleep 30", port: 3999), forPath: OverrideStore.key(directory: t.directory, kind: t.kind))
+        await model.refresh()
+        model.settings.settings.notificationsEnabled = true
+        model.installCommandOverride = "echo installing; sleep 1; mkdir -p node_modules"
+        await model.run(model.projects[0], kinds: [.frontend])
+        let install = Task { await model.confirmInstall() }
+        try? await Task.sleep(for: .milliseconds(500))                // mid-install
+        #expect(sb.notifier.posted.isEmpty)                            // no false "ready" from install output
+        await install.value
+        await model.stopAllServices()
+    }
+}

@@ -60,3 +60,51 @@ import NexCore
         #expect(ProjectFilter.pinned.symbol == "pin")
     }
 }
+
+@MainActor
+@Suite(.serialized) struct ToggleRunTests {
+    private func waitUntil(_ timeout: TimeInterval = 5, _ cond: () -> Bool) async -> Bool {
+        let end = Date().addingTimeInterval(timeout)
+        while Date() < end { if cond() { return true }; try? await Task.sleep(for: .milliseconds(25)) }
+        return cond()
+    }
+
+    @Test func flutterOnlyProjectOpensItsPageInsteadOfSilentlyDoingNothing() async {
+        let sb = Sandbox(); defer { _ = sb }
+        sb.write("Mob/pubspec.yaml", "name: a\ndependencies:\n  flutter:\n    sdk: flutter\n")
+        let m = sb.makeModel(); m.reloadWidgets = {}
+        var opened = false
+        m.openMainWindowAction = { opened = true }
+        await m.refresh()
+        await m.toggleRun(m.projects[0])
+        #expect(m.page == .project(m.projects[0].id))
+        #expect(opened)
+        #expect(m.processes.runningCount == 0)
+    }
+
+    @Test func flutterPlusDockerRunsDocker() async {
+        let sb = Sandbox(); defer { _ = sb }
+        sb.write("Both/pubspec.yaml", "name: a\ndependencies:\n  flutter:\n    sdk: flutter\n")
+        sb.write("Both/docker-compose.yml", "services: {}")
+        let m = sb.makeModel(); m.reloadWidgets = {}
+        await m.refresh()
+        let docker = m.projects[0].targets.first { $0.kind == .docker }!
+        m.overrides.set(Override(command: "sleep 30"), forPath: OverrideStore.key(directory: docker.directory, kind: .docker))
+        await m.refresh()
+        await m.toggleRun(m.projects[0])
+        #expect(await waitUntil { m.processes.runningCount == 1 })
+        await m.stopAllServices()
+    }
+
+    @Test func runningNeedingAnInstallBringsTheWindowForward() async {
+        let sb = Sandbox(); defer { _ = sb }
+        sb.write("Site/package.json", Sandbox.vite)                 // no node_modules
+        let m = sb.makeModel(); m.reloadWidgets = {}
+        var opened = false
+        m.openMainWindowAction = { opened = true }
+        await m.refresh()
+        await m.toggleRun(m.projects[0])
+        #expect(m.pendingInstall != nil)
+        #expect(opened)
+    }
+}

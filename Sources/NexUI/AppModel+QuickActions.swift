@@ -5,6 +5,13 @@ import NexProcess
 
 public enum QuickGitAction: Sendable {
     case fetch, pull, push
+    var progressive: String {
+        switch self {
+        case .fetch: return "Fetching"
+        case .pull: return "Pulling"
+        case .push: return "Pushing"
+        }
+    }
     var pastTense: String {
         switch self {
         case .fetch: return "Fetched"
@@ -46,10 +53,18 @@ extension AppModel {
 
     // MARK: - Quick git actions (fetch / pull / push across the project's repositories)
 
+    public func isGitBusy(_ project: Project) -> Bool { gitBusy.contains(project.id) }
+
+    /// Runs the action on every repository of the project. A failure doesn't stop the others; the report
+    /// names each repository that failed, and the badges are refreshed either way.
     @discardableResult
     public func quickGit(_ action: QuickGitAction, project: Project) async -> QuickGitReport {
         let repos = git.findRepos(under: project.root)
         guard !repos.isEmpty else { return report(.init(success: false, message: "\(project.name) isn't a git repository.")) }
+        guard !gitBusy.contains(project.id) else { return report(.init(success: false, message: "\(project.name) is still busy with git.")) }
+        gitBusy.insert(project.id)
+        statusMessage = StatusMessage(text: "\(action.progressive) \(project.name)…", isError: false)
+        var failures: [String] = []
         for repo in repos {
             do {
                 switch action {
@@ -59,14 +74,14 @@ extension AppModel {
                 }
             } catch {
                 let reason = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-                let place = repos.count > 1 ? "\(project.name) (\(repo.lastPathComponent))" : project.name
-                return report(.init(success: false, message: "\(place): \(reason)"))
+                failures.append((repos.count > 1 ? "\(project.name) (\(repo.lastPathComponent))" : project.name) + ": " + reason)
             }
         }
-        let suffix = repos.count > 1 ? " (\(repos.count) repositories)" : ""
-        let result = report(.init(success: true, message: "\(action.pastTense) \(project.name)\(suffix)."))
+        gitBusy.remove(project.id)
         await refreshGitBadges()
-        return result
+        if !failures.isEmpty { return report(.init(success: false, message: failures.joined(separator: "\n"))) }
+        let suffix = repos.count > 1 ? " (\(repos.count) repositories)" : ""
+        return report(.init(success: true, message: "\(action.pastTense) \(project.name)\(suffix)."))
     }
 
     private func report(_ r: QuickGitReport) -> QuickGitReport {

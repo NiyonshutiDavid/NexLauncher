@@ -36,10 +36,16 @@ extension AppModel {
     }
 
     /// Run with the project's default action, or stop it if it is running (Dock menu, menu bar, URL).
+    /// Flutter needs a device choice, so a Flutter-only project opens its page in the main window instead.
     public func toggleRun(_ project: Project) async {
         if isRunning(project) { await stop(project); return }
-        let actions = availableActions(for: project)
-        guard let action = CardPrimaryAction.defaultAction(for: actions), action != .flutter else { return }
+        let actions = availableActions(for: project).filter { $0 != .flutter }
+        guard let action = CardPrimaryAction.defaultAction(for: actions) else {
+            page = .project(project.id)
+            detailTab = .overview
+            showMainWindow()
+            return
+        }
         await run(project, kinds: action.kinds)
     }
 }

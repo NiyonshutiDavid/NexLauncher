@@ -21,8 +21,12 @@ struct NexLauncherApp: App {
                 }
         }
         .windowStyle(.hiddenTitleBar)
+        .windowBackgroundDragBehavior(.enabled)       // the title bar is hidden: drag the window by its background
         .windowToolbarStyle(.unified)
-        .commands { SettingsCommands(model: model) }
+        .commands {
+            SidebarCommands()
+            SettingsCommands(model: model)
+        }
 
         MenuBarExtra {
             MenuBarContent(model: model)
@@ -55,10 +59,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     /// Owned here (not by a window) so Quit can always see running services and terminals, even with no window open.
     let model = AppModel()
 
-    func applicationDidFinishLaunching(_ notification: Notification) {
+    /// The notification delegate must be in place before launch finishes, or a click that launched the app is lost.
+    func applicationWillFinishLaunching(_ notification: Notification) {
         guard Bundle.main.bundleURL.pathExtension == "app" else { return }
         UNUserNotificationCenter.current().delegate = self
         (model.notifier as? SystemNotifier)?.registerCategories()
+    }
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
         Task { await model.refreshNotificationStatus() }
     }
 

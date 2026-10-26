@@ -6,6 +6,7 @@ import NexCore
 public struct MenuBarContent: View {
     @Bindable var model: AppModel
     @Environment(\.theme) private var theme
+    @Environment(\.openWindow) private var openWindow
     @State private var query = ""
 
     public init(model: AppModel) { self.model = model }
@@ -38,6 +39,10 @@ public struct MenuBarContent: View {
         }
         .frame(width: 400)
         .background(theme.canvas)
+        .onAppear {
+            // The popover can be the only UI alive (no window yet), so it must be able to open one.
+            if model.openMainWindowAction == nil { model.openMainWindowAction = { openWindow(id: "main") } }
+        }
         .task { if model.projects.isEmpty { await model.refresh() }; await model.refreshNotificationStatus() }
     }
 

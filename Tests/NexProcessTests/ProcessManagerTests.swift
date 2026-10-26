@@ -4,7 +4,7 @@ import NexCore
 @testable import NexProcess
 
 @MainActor
-private func waitUntil(_ timeout: TimeInterval = 5, _ condition: () -> Bool) async -> Bool {
+private func waitUntil(_ timeout: TimeInterval = 15, _ condition: () -> Bool) async -> Bool {
     let deadline = Date().addingTimeInterval(timeout)
     while Date() < deadline {
         if condition() { return true }

@@ -109,3 +109,42 @@ import NexTestSupport
         await m.stopAllServices()
     }
 }
+
+@MainActor
+@Suite struct QuickGitMultiRepoTests {
+    @Test func aFailingRepositoryDoesNotStopTheOthersAndBadgesRefresh() async {
+        let sb = Sandbox(); defer { _ = sb }
+        let helper = TempRepo(initialize: false)
+        let project = sb.scanRoot.appendingPathComponent("Multi")
+        let good = project.appendingPathComponent("a-front"), bad = project.appendingPathComponent("z-back")
+        sb.write("Multi/a-front/package.json", Sandbox.vite)
+        sb.write("Multi/z-back/manage.py")
+        for dir in [good, bad] {
+            helper.run(["init", "-b", "main"], in: dir)
+            helper.run(["config", "user.name", "T"], in: dir); helper.run(["config", "user.email", "t@x.com"], in: dir)
+            helper.run(["config", "commit.gpgsign", "false"], in: dir)
+            helper.run(["add", "-A"], in: dir); helper.run(["commit", "-m", "first"], in: dir)
+        }
+        // a-front has an origin with a newer commit; z-back has no remote at all.
+        let bare = helper.base.appendingPathComponent("origin.git")
+        try! FileManager.default.createDirectory(at: bare, withIntermediateDirectories: true)
+        helper.run(["init", "--bare", "-b", "main"], in: bare)
+        helper.run(["remote", "add", "origin", bare.path], in: good)
+        helper.run(["push", "-u", "origin", "main"], in: good)
+        let collab = helper.base.appendingPathComponent("collab")
+        helper.run(["clone", bare.path, "collab"], in: helper.base)
+        helper.run(["config", "user.name", "C"], in: collab); helper.run(["config", "user.email", "c@x.com"], in: collab)
+        helper.run(["config", "commit.gpgsign", "false"], in: collab)
+        try! "hello".write(to: collab.appendingPathComponent("new.txt"), atomically: true, encoding: .utf8)
+        helper.run(["add", "-A"], in: collab); helper.run(["commit", "-m", "remote"], in: collab); helper.run(["push"], in: collab)
+
+        let m = sb.makeModel(); m.reloadWidgets = {}
+        await m.refresh()
+        let p = m.projects[0]
+        let report = await m.quickGit(.pull, project: p)
+        #expect(!report.success)
+        #expect(report.message.contains("z-back"))                                       // names the repo that failed
+        #expect(FileManager.default.fileExists(atPath: good.appendingPathComponent("new.txt").path))   // the other repo was still pulled
+        #expect(!m.isGitBusy(p))
+    }
+}

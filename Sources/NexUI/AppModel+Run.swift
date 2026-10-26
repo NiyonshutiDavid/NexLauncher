@@ -53,6 +53,7 @@ extension AppModel {
         let targets = project.targets.filter { kinds.contains($0.kind) }
         if targets.contains(where: CommandBuilder.needsInstall) {
             pendingInstall = PendingInstall(project: project, kinds: kinds, flutterDevice: flutterDevice)
+            showMainWindow()          // the install question lives in the main window
             return
         }
         settings.settings.lastRun = LastRun(projectID: project.id, action: RunAction.from(kinds: kinds).rawValue)
@@ -71,6 +72,7 @@ extension AppModel {
         pendingInstall = nil
         for target in pending.project.targets where pending.kinds.contains(target.kind) && CommandBuilder.needsInstall(target) {
             var install = target
+            install.port = nil        // an install isn't the server: it must not look 'ready' on a configured port
             install.command = installCommandOverride.map { "cd \(CommandBuilder.quote(target.directory.path)) && \($0)" }
                 ?? CommandBuilder.installCommand(for: target)
             processes.start(install, projectID: pending.project.id)

@@ -34,8 +34,13 @@ public enum AppSheet: Identifiable, Equatable, Sendable {
 extension AppModel {
     /// Brings the main window forward, reopening it if every window was closed.
     public func showMainWindow() {
-        if !NSApp.windows.contains(where: { $0.isVisible && $0.canBecomeMain }) { openMainWindowAction?() }
-        NSApp.activate()
+        let windows = NSApp?.windows ?? []
+        if let minimised = windows.first(where: { $0.isMiniaturized && $0.canBecomeMain }) {
+            minimised.deminiaturize(nil)             // restore instead of opening a second window
+        } else if !windows.contains(where: { $0.isVisible && $0.canBecomeMain }) {
+            openMainWindowAction?()
+        }
+        NSApp?.activate()
     }
 
     // MARK: - View mode
