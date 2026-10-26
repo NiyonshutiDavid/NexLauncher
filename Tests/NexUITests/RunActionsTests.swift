@@ -102,9 +102,9 @@ import NexProcess
 
     @Test func twoFrontendsInOneProjectBothStart() async {
         let sb = Sandbox()
-        for d in ["web", "admin"] {
-            sb.write("Mono/\(d)/package.json", Sandbox.vite)
-            try! FileManager.default.createDirectory(at: sb.scanRoot.appendingPathComponent("Mono/\(d)/node_modules"), withIntermediateDirectories: true)
+        for d in ["", "docs/"] {      // an app with a second frontend inside it
+            sb.write("Mono/\(d)package.json", Sandbox.vite)
+            try! FileManager.default.createDirectory(at: sb.scanRoot.appendingPathComponent("Mono/\(d)node_modules"), withIntermediateDirectories: true)
         }
         let model = sb.makeModel(); await model.refresh()
         let p = model.projects[0]

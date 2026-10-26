@@ -5,7 +5,10 @@ public struct ProjectScanner: Sendable {
         "node_modules", ".git", "build", "dist", ".next", ".dart_tool",
         "venv", ".venv", "NexLauncher", "__pycache__", "Pods", ".gradle",
     ]
+    /// How many levels below an app's own folder are searched for manifests.
     static let maxDepth = 2
+    /// How deep below the scan root folders are considered at all.
+    static let maxTreeDepth = 4
 
     private let skipNames: Set<String>
     private let overrides: OverrideStore?
@@ -15,44 +18,74 @@ public struct ProjectScanner: Sendable {
         self.overrides = overrides
     }
 
+    /// Every runnable app under `root`, flattened (collections and nested apps included).
     public func scan(root: URL) -> [Project] {
-        let fm = FileManager.default
-        guard let children = try? fm.contentsOfDirectory(
-            at: root, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]
-        ) else { return [] }
-
-        var projects: [Project] = []
-        for child in children.sorted(by: { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }) {
-            guard isDirectory(child), !skipNames.contains(child.lastPathComponent) else { continue }
-            var visited = Set<String>()
-            var targets: [ServiceTarget] = []
-            collect(in: child, depth: 0, visited: &visited, into: &targets)
-            guard !targets.isEmpty else { continue }
-            projects.append(Project(id: child.path, name: child.lastPathComponent, root: child, targets: targets))
-        }
-        return projects
+        scanTree(root: root).flatMap(\.apps)
     }
 
-    // MARK: - Walking
-
-    private func collect(in dir: URL, depth: Int, visited: inout Set<String>, into targets: inout [ServiceTarget]) {
-        let real = dir.resolvingSymlinksInPath().path
-        guard visited.insert(real).inserted else { return }
-
-        let found = Self.detect(in: dir).map(finalize)
-        targets.append(contentsOf: found)
-        // A directory that is itself a runnable target is a leaf: don't hunt for nested apps inside it.
-        guard found.isEmpty, depth < Self.maxDepth else { return }
-
-        let children = (try? FileManager.default.contentsOfDirectory(
-            at: dir, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]
-        )) ?? []
-        for child in children.sorted(by: { $0.lastPathComponent < $1.lastPathComponent })
-        where isDirectory(child) && !skipNames.contains(child.lastPathComponent) {
-            collect(in: child, depth: depth + 1, visited: &visited, into: &targets)
-        }
+    /// The project tree under `root`. Rules for a folder F:
+    ///  1. F has manifests of its own → an app (its subfolders' targets join it, except nested repos, which become children).
+    ///  2. Otherwise, if two or more subfolders hold apps and they are not a frontend+backend pair → a collection
+    ///     whose children are those subfolders, evaluated recursively.
+    ///  3. Otherwise the targets found below F make one app (or nothing).
+    public func scanTree(root: URL) -> [ProjectNode] {
+        subdirectories(of: root)
+            .compactMap { node(for: $0, depth: 1) }
     }
 
+    // MARK: - Tree building
+
+    private func node(for dir: URL, depth: Int) -> ProjectNode? {
+        if Self.detect(in: dir).isEmpty, depth < Self.maxTreeDepth {
+            let slots = subdirectories(of: dir).filter { !collectTargets(in: $0, depth: depth + 1).targets.isEmpty }
+            if slots.count >= 2 {
+                let kinds = Set(slots.flatMap { collectTargets(in: $0, depth: depth + 1).targets.map(\.kind) })
+                if !(kinds.contains(.frontend) && kinds.contains(.backend)) {
+                    let children = slots.compactMap { node(for: $0, depth: depth + 1) }
+                    if children.count >= 2 {
+                        return ProjectNode(id: dir.path, name: dir.lastPathComponent, url: dir, kind: .collection, project: nil, children: children)
+                    }
+                }
+            }
+        }
+        let (targets, nested) = collectTargets(in: dir, depth: depth)
+        guard !targets.isEmpty else { return nil }
+        let project = Project(id: dir.path, name: dir.lastPathComponent, root: dir, targets: targets)
+        let children = nested.compactMap { node(for: $0.url, depth: $0.depth) }
+        return ProjectNode(id: dir.path, name: dir.lastPathComponent, url: dir, kind: .app, project: project, children: children)
+    }
+
+    /// Targets in `dir` and up to two levels below it. Nested git repositories are returned separately.
+    private func collectTargets(in dir: URL, depth: Int) -> (targets: [ServiceTarget], nested: [(url: URL, depth: Int)]) {
+        var targets: [ServiceTarget] = []
+        var nested: [(url: URL, depth: Int)] = []
+        func walk(_ d: URL, rel: Int, abs: Int) {
+            let found = Self.detect(in: d).map(finalize)
+            targets.append(contentsOf: found)
+            // A sub-folder that is itself a target is a leaf; the app's own root keeps looking for siblings.
+            guard rel < Self.maxDepth, abs < Self.maxTreeDepth, rel == 0 || found.isEmpty else { return }
+            for sub in subdirectories(of: d) {
+                if FileManager.default.fileExists(atPath: sub.appendingPathComponent(".git").path) {
+                    nested.append((sub, abs + 1))
+                    continue
+                }
+                walk(sub, rel: rel + 1, abs: abs + 1)
+            }
+        }
+        walk(dir, rel: 0, abs: depth)
+        return (targets, nested)
+    }
+
+    /// Visible sub-folders, skipping the skip-list and symlinks (so loops cannot occur), sorted by name.
+    private func subdirectories(of dir: URL) -> [URL] {
+        let kids = (try? FileManager.default.contentsOfDirectory(
+            at: dir, includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey], options: [.skipsHiddenFiles])) ?? []
+        return kids.filter { url in
+            guard !skipNames.contains(url.lastPathComponent),
+                  let v = try? url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey]) else { return false }
+            return v.isDirectory == true && v.isSymbolicLink != true
+        }.sorted { $0.lastPathComponent.localizedCaseInsensitiveCompare($1.lastPathComponent) == .orderedAscending }
+    }
 
     /// Fills the default command, then applies any user override keyed by `"<dir>|<detected kind>"`.
     private func finalize(_ detected: ServiceTarget) -> ServiceTarget {
@@ -65,10 +98,6 @@ public struct ProjectScanner: Sendable {
         }
         target.port = o.port
         return ServiceTarget(kind: kind, directory: target.directory, framework: target.framework, command: target.command, port: target.port)
-    }
-
-    private func isDirectory(_ url: URL) -> Bool {
-        (try? url.resolvingSymlinksInPath().resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false
     }
 
     // MARK: - Manifest detection
