@@ -58,10 +58,16 @@ struct HomeView: View {
             Menu {
                 Button("New folder…", systemImage: "folder.badge.plus") { model.sheet = .addProject(.newFolder) }
                 Button("Clone repository…", systemImage: "arrow.down.circle") { model.sheet = .addProject(.clone) }
-            } label: { Image(systemName: "plus").font(.system(size: 13, weight: .bold)).frame(width: 28, height: 28).contentShape(Rectangle()) }
-                .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize().help("Add a project")
-            Button { Task { await model.refresh() } } label: { Image(systemName: "arrow.clockwise").font(.system(size: 13, weight: .semibold)).frame(width: 28, height: 28).contentShape(Rectangle()) }
-                .buttonStyle(.plain).help("Scan for projects again")
+            } label: {
+                Image(systemName: "plus").font(.system(size: 14, weight: .bold)).foregroundStyle(theme.onAccent)
+                    .frame(width: 32, height: 32)
+                    .background(theme.accent, in: Circle())                       // filled, so it reads as the primary action
+                    .overlay(Circle().strokeBorder(.white.opacity(0.28), lineWidth: 1))
+                    .shadow(color: theme.accent.opacity(0.4), radius: 6, y: 2)
+                    .contentShape(Circle())
+            }
+            .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize().help("Add a project")
+            IconButton("arrow.clockwise", help: "Scan for projects again") { Task { await model.refresh() } }
         }
     }
 
