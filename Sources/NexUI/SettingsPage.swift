@@ -29,7 +29,6 @@ struct SettingsPage: View {
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Settings").font(.system(size: 28, weight: .bold, design: .rounded)).foregroundStyle(theme.fg).padding(.bottom, 10)
                 ForEach(SettingsSection.allCases) { s in
                     Button { selected = s } label: {
                         Label(s.rawValue, systemImage: symbol(s))
@@ -44,7 +43,7 @@ struct SettingsPage: View {
                 }
                 Spacer()
             }
-            .frame(width: 210).padding(24)
+            .frame(width: 210).padding(24).padding(.top, GlassHeaderMetrics.inset - 24)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
@@ -57,11 +56,13 @@ struct SettingsPage: View {
                     case .projects: ProjectsSection(model: model)
                     }
                 }
-                .padding(.vertical, 28).padding(.trailing, 32)
+                .padding(.bottom, 28).padding(.trailing, 32)
                 .frame(maxWidth: 720, alignment: .leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .contentMargins(.top, GlassHeaderMetrics.inset, for: .scrollContent)
         }
+        .glassHeader(title: "Settings")
         .onChange(of: section) { _, new in selected = new }
     }
 }

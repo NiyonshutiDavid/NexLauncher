@@ -27,7 +27,7 @@ struct SidebarView: View {
                         Image(systemName: "bolt.horizontal.circle.fill").foregroundStyle(theme.accent).font(.title3)
                         Text("NexLauncher").font(.headline.weight(.bold)).foregroundStyle(theme.fg)
                     }
-                    .padding(.horizontal, 12).padding(.top, 8).padding(.bottom, 14)
+                    .padding(.horizontal, 12).padding(.top, 30).padding(.bottom, 14)       // clears the traffic lights
 
                     ForEach(ProjectFilter.allCases) { f in
                         Button { model.select(filter: f) } label: {

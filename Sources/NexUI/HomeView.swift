@@ -44,27 +44,26 @@ struct HomeView: View {
             .padding(32)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .searchable(text: $model.searchText, prompt: "Search projects")
-        .toolbar {
-            ToolbarItem {
-                Picker("View", selection: $model.viewMode) {
-                    Label("Cards", systemImage: "square.grid.2x2").tag(ViewMode.cards)
-                    Label("Folders", systemImage: "list.bullet.indent").tag(ViewMode.folders)
-                }
-                .pickerStyle(.segmented)
-                .help("Switch between cards and the folder structure")
+        .contentMargins(.top, GlassHeaderMetrics.inset, for: .scrollContent)
+        .glassHeader(title: headerTitle) {
+            EmptyView()
+        } trailing: {
+            GlassSearchField(text: $model.searchText)
+            Picker("View", selection: $model.viewMode) {
+                Label("Cards", systemImage: "square.grid.2x2").tag(ViewMode.cards)
+                Label("Folders", systemImage: "list.bullet.indent").tag(ViewMode.folders)
             }
-            ToolbarItem {
-                Menu {
-                    Button("New folder…", systemImage: "folder.badge.plus") { model.sheet = .addProject(.newFolder) }
-                    Button("Clone repository…", systemImage: "arrow.down.circle") { model.sheet = .addProject(.clone) }
-                } label: { Label("Add project", systemImage: "plus") }
-                .help("Add a project")
-            }
-            ToolbarItem {
-                Button { Task { await model.refresh() } } label: { Label("Refresh", systemImage: "arrow.clockwise") }
-                    .help("Scan for projects again")
-            }
+            .pickerStyle(.segmented).labelsHidden().frame(width: 116)
+            .help("Switch between cards and the folder structure")
+            Menu {
+                Button("New folder…", systemImage: "folder.badge.plus") { model.sheet = .addProject(.newFolder) }
+                Button("Clone repository…", systemImage: "arrow.down.circle") { model.sheet = .addProject(.clone) }
+            } label: { Image(systemName: "plus").font(.system(size: 13, weight: .bold)).frame(width: 28, height: 28).contentShape(Rectangle()) }
+                .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize().help("Add a project")
+            Button { Task { await model.refresh() } } label: { Image(systemName: "arrow.clockwise").font(.system(size: 13, weight: .semibold)).frame(width: 28, height: 28).contentShape(Rectangle()) }
+                .buttonStyle(.plain).help("Scan for projects again")
         }
     }
+
+    private var headerTitle: String { model.showOnlyUncommitted ? "Unsaved changes" : "Projects" }
 }

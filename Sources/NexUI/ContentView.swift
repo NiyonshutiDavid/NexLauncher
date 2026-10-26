@@ -25,6 +25,7 @@ private struct RootContent: View {
             page
                 .background(theme.canvas)
         }
+        .toolbar(.hidden, for: .windowToolbar)
         .sheet(item: $model.sheet) { sheet in
             switch sheet {
             case .addProject(let mode): AddProjectSheet(model: model, initialMode: mode)

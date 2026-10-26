@@ -15,11 +15,6 @@ struct ProjectDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
-                Button { model.page = .home } label: {
-                    Label("Projects", systemImage: "chevron.left").font(.callout.weight(.medium)).foregroundStyle(theme.accent)
-                }
-                .buttonStyle(.plain)
-
                 header
 
                 Picker("", selection: $model.detailTab) {
@@ -31,6 +26,16 @@ struct ProjectDetailView: View {
             }
             .padding(32)
             .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .contentMargins(.top, GlassHeaderMetrics.inset, for: .scrollContent)
+        .glassHeader(title: project?.name ?? folder.lastPathComponent) {
+            Button { model.page = .home } label: {
+                Label("Projects", systemImage: "chevron.left").labelStyle(.titleAndIcon).font(.callout.weight(.medium)).foregroundStyle(theme.accent)
+            }
+            .buttonStyle(.plain)
+            Divider().frame(height: 18)
+        } trailing: {
+            if let project { RunPill(model: model, project: project) }
         }
     }
 

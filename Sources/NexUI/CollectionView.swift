@@ -9,11 +9,6 @@ struct CollectionView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                Button { model.page = .home } label: {
-                    Label("Projects", systemImage: "chevron.left").font(.callout.weight(.medium)).foregroundStyle(theme.accent)
-                }
-                .buttonStyle(.plain)
-
                 HStack(spacing: 16) {
                     IconTile(name: node.name, glyph: "folder.fill", size: 72)
                     VStack(alignment: .leading, spacing: 4) {
@@ -29,6 +24,14 @@ struct CollectionView: View {
                 }
             }
             .padding(32)
+        }
+        .contentMargins(.top, GlassHeaderMetrics.inset, for: .scrollContent)
+        .glassHeader(title: node.name) {
+            Button { model.page = .home } label: {
+                Label("Projects", systemImage: "chevron.left").font(.callout.weight(.medium)).foregroundStyle(theme.accent)
+            }
+            .buttonStyle(.plain)
+            Divider().frame(height: 18)
         }
     }
 }
