@@ -3,13 +3,14 @@ import NexCore
 import NexProcess
 
 public enum RunAction: String, Hashable, Sendable {
-    case frontend = "Frontend", backend = "Backend", both = "Both", flutter = "Flutter", docker = "Docker"
+    case frontend = "Frontend", backend = "Backend", both = "Both", app = "App", flutter = "Flutter", docker = "Docker"
 
     /// The action that corresponds to a set of kinds (used to remember the last run).
     public static func from(kinds: Set<ServiceKind>) -> RunAction {
         if kinds.contains(.frontend) && kinds.contains(.backend) { return .both }
         if kinds.contains(.frontend) { return .frontend }
         if kinds.contains(.backend) { return .backend }
+        if kinds.contains(.app) { return .app }
         if kinds.contains(.flutter) { return .flutter }
         return .docker
     }
@@ -19,6 +20,7 @@ public enum RunAction: String, Hashable, Sendable {
         case .frontend: return [.frontend]
         case .backend: return [.backend]
         case .both: return [.frontend, .backend]
+        case .app: return [.app]
         case .flutter: return [.flutter]
         case .docker: return [.docker]
         }
@@ -43,6 +45,7 @@ extension AppModel {
         if kinds.contains(.frontend) { out.append(.frontend) }
         if kinds.contains(.backend) { out.append(.backend) }
         if kinds.contains(.frontend) && kinds.contains(.backend) { out.append(.both) }
+        if kinds.contains(.app) { out.append(.app) }
         if kinds.contains(.flutter) { out.append(.flutter) }
         if kinds.contains(.docker) { out.append(.docker) }
         return out
@@ -81,7 +84,10 @@ extension AppModel {
             if processes.wasUserStopped(id) { return }          // Stop pressed mid-install: don't start the server
             if case .failed = processes.states[id] { return }   // leave the failure visible in the log
         }
-        await run(pending.project, kinds: pending.kinds, flutterDevice: pending.flutterDevice)
+        // Setup can change how a project runs (e.g. a new .venv), so rescan before starting it.
+        await refresh()
+        let fresh = project(id: pending.project.id) ?? pending.project
+        await run(fresh, kinds: pending.kinds, flutterDevice: pending.flutterDevice)
     }
 
     public func cancelInstall() { pendingInstall = nil }

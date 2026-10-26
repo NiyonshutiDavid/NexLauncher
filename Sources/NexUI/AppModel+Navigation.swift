@@ -181,7 +181,7 @@ public enum HomeText {
 public enum CardPrimaryAction {
     /// What the main pill does: prefers running everything, then frontend, backend, Flutter, Docker.
     public static func defaultAction(for actions: [RunAction]) -> RunAction? {
-        [RunAction.both, .frontend, .backend, .flutter, .docker].first { actions.contains($0) }
+        [RunAction.both, .frontend, .backend, .app, .flutter, .docker].first { actions.contains($0) }
     }
 
     public static func title(running: Bool, actions: [RunAction]) -> String {

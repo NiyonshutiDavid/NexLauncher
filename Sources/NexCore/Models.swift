@@ -1,7 +1,7 @@
 import Foundation
 
 public enum ServiceKind: String, Codable, Sendable, CaseIterable {
-    case frontend, backend, flutter, docker
+    case frontend, backend, flutter, docker, app
 }
 
 public struct ServiceTarget: Codable, Hashable, Sendable {

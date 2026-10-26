@@ -58,11 +58,11 @@ public struct ProjectScanner: Sendable {
         let nested: [(url: URL, depth: Int)]
     }
 
-    private func detectedTargets(in dir: URL, cache: ScanCache) -> [ServiceTarget] {
-        let key = dir.path
+    private func detectedTargets(in dir: URL, cache: ScanCache, allowFallbacks: Bool = true) -> [ServiceTarget] {
+        let key = dir.path + (allowFallbacks ? "" : "#strict")
         if let hit = cache.detected[key] { return hit }
         cache.detectCounts[key, default: 0] += 1
-        let found = Self.detect(in: dir).map(finalize)
+        let found = Self.detect(in: dir, allowFallbacks: allowFallbacks).map(finalize)
         cache.detected[key] = found
         return found
     }
@@ -109,7 +109,7 @@ public struct ProjectScanner: Sendable {
         var targets: [ServiceTarget] = []
         var nested: [(url: URL, depth: Int)] = []
         func walk(_ d: URL, rel: Int, abs: Int) {
-            let found = detectedTargets(in: d, cache: cache)
+            let found = detectedTargets(in: d, cache: cache, allowFallbacks: rel == 0)
             targets.append(contentsOf: found)
             // A sub-folder that is itself a target is a leaf; the app's own root keeps looking for siblings.
             guard rel < Self.maxDepth, abs < Self.maxTreeDepth, rel == 0 || found.isEmpty else { return }
@@ -144,7 +144,9 @@ public struct ProjectScanner: Sendable {
     /// Fills the default command, then applies any user override keyed by `"<dir>|<detected kind>"`.
     private func finalize(_ detected: ServiceTarget) -> ServiceTarget {
         var target = detected
-        target.command = CommandBuilder.command(for: detected.kind, at: detected.directory, framework: detected.framework, flutterDevice: "macos")
+        if target.command.isEmpty {
+            target.command = CommandBuilder.command(for: detected.kind, at: detected.directory, framework: detected.framework, flutterDevice: "macos")
+        }
         guard let o = overrides?.override(forPath: OverrideStore.key(directory: detected.directory, kind: detected.kind)) else { return target }
         let kind = o.kind ?? detected.kind
         if let cmd = o.command { target.command = cmd } else if kind != detected.kind {
@@ -156,41 +158,11 @@ public struct ProjectScanner: Sendable {
 
     // MARK: - Manifest detection
 
-    static func detect(in dir: URL) -> [ServiceTarget] {
-        let fm = FileManager.default
-        func exists(_ name: String) -> Bool { fm.fileExists(atPath: dir.appendingPathComponent(name).path) }
-        func text(_ name: String) -> String? { try? String(contentsOf: dir.appendingPathComponent(name), encoding: .utf8) }
-        var out: [ServiceTarget] = []
-        func add(_ kind: ServiceKind, _ framework: String?) {
-            out.append(ServiceTarget(kind: kind, directory: dir, framework: framework, command: ""))
+    static func detect(in dir: URL, allowFallbacks: Bool = true) -> [ServiceTarget] {
+        StackDetector.detect(in: dir, allowFallbacks: allowFallbacks).map { stack in
+            let body = stack.kind == .flutter ? stack.run + " -d macos" : stack.run
+            return ServiceTarget(kind: stack.kind, directory: dir, framework: stack.framework,
+                                 command: "cd \(CommandBuilder.quote(dir.path)) && \(body)")
         }
-
-        if let pkg = text("package.json"), let node = nodeKind(pkg) { add(node.kind, node.framework) }
-        if exists("manage.py") {
-            add(.backend, "Django")
-        } else if let req = text("requirements.txt")?.lowercased() {
-            if req.contains("fastapi") { add(.backend, "FastAPI") } else if req.contains("flask") { add(.backend, "Flask") }
-        }
-        if let pub = text("pubspec.yaml"), pub.contains("flutter:") { add(.flutter, "Flutter") }
-        if ["docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"].contains(where: exists) { add(.docker, "Docker") }
-        return out
-    }
-
-    private static let frontendFrameworks: [(dep: String, name: String)] = [
-        ("next", "Next.js"), ("nuxt", "Nuxt"), ("react-scripts", "Create React App"), ("vite", "Vite"),
-        ("@angular/core", "Angular"), ("svelte", "Svelte"), ("vue", "Vue"), ("react", "React"),
-    ]
-    private static let backendDeps = ["express", "@nestjs/core", "fastify", "koa", "@hapi/hapi"]
-
-    static func nodeKind(_ json: String) -> (kind: ServiceKind, framework: String?)? {
-        guard let data = json.data(using: .utf8),
-              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
-        let scripts = obj["scripts"] as? [String: Any] ?? [:]
-        guard scripts["dev"] != nil || scripts["start"] != nil else { return nil }
-        let deps = Set(((obj["dependencies"] as? [String: Any]) ?? [:]).keys)
-            .union(((obj["devDependencies"] as? [String: Any]) ?? [:]).keys)
-        if let fw = frontendFrameworks.first(where: { deps.contains($0.dep) }) { return (.frontend, fw.name) }
-        if let be = backendDeps.first(where: { deps.contains($0) }) { return (.backend, be == "@nestjs/core" ? "NestJS" : be.capitalized) }
-        return (.frontend, nil)
     }
 }

@@ -15,41 +15,41 @@ public enum CommandBuilder {
         "cd \(quote(directory.path)) && " + body(for: kind, at: directory, framework: framework, flutterDevice: flutterDevice)
     }
 
+    /// The stack in `directory` that a target of this kind (and framework, if known) refers to.
+    static func stack(for kind: ServiceKind, at directory: URL, framework: String?) -> DetectedStack? {
+        let stacks = StackDetector.detect(in: directory).filter { $0.kind == kind }
+        return stacks.first { $0.framework == framework } ?? stacks.first
+    }
+
     private static func body(for kind: ServiceKind, at dir: URL, framework: String?, flutterDevice: String?) -> String {
+        let device = flutterDevice.map { " -d \(quoteIfNeeded($0))" } ?? ""
+        if let found = stack(for: kind, at: dir, framework: framework) {
+            return kind == .flutter ? found.run + device : found.run
+        }
+        // Nothing on disk matches (e.g. a role override): sensible defaults per kind.
         switch kind {
-        case .flutter:
-            return "flutter run" + (flutterDevice.map { " -d \(quoteIfNeeded($0))" } ?? "")
-        case .docker:
-            return "docker compose up"
-        case .frontend, .backend:
-            let fm = FileManager.default
-            let pythonFrameworks: Set<String> = ["Django", "FastAPI", "Flask"]
-            if !pythonFrameworks.contains(framework ?? ""), fm.fileExists(atPath: dir.appendingPathComponent("package.json").path) {
-                return hasScript("dev", in: dir) ? "npm run dev" : "npm start"
-            }
+        case .flutter: return "flutter run" + device
+        case .docker: return "docker compose up"
+        case .frontend, .backend, .app:
             let python = ["venv", ".venv"].map { "\($0)/bin/python" }
-                .first { fm.fileExists(atPath: dir.appendingPathComponent($0).path) } ?? "python3"
+                .first { FileManager.default.fileExists(atPath: dir.appendingPathComponent($0).path) } ?? "python3"
+            if FileManager.default.fileExists(atPath: dir.appendingPathComponent("package.json").path) { return "npm run dev" }
             if framework == "FastAPI" { return "\(python) -m uvicorn main:app --reload" }
-            if framework == "Flask" { return "\(python) -m flask run" }
             return "\(python) manage.py runserver"
         }
     }
 
-    private static func hasScript(_ name: String, in dir: URL) -> Bool {
-        guard let data = try? Data(contentsOf: dir.appendingPathComponent("package.json")),
-              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let scripts = obj["scripts"] as? [String: Any] else { return false }
-        return scripts[name] != nil
-    }
-
+    /// True when the target's stack has a setup step whose marker (e.g. node_modules, .venv, vendor) is missing.
     public static func needsInstall(_ target: ServiceTarget) -> Bool {
+        guard let found = stack(for: target.kind, at: target.directory, framework: target.framework),
+              found.install != nil, let marker = found.installMarker else { return false }
         let fm = FileManager.default
-        guard target.kind == .frontend || target.kind == .backend,
-              fm.fileExists(atPath: target.directory.appendingPathComponent("package.json").path) else { return false }
-        return !fm.fileExists(atPath: target.directory.appendingPathComponent("node_modules").path)
+        let markers = marker == ".venv" ? [".venv", "venv"] : [marker]
+        return !markers.contains { fm.fileExists(atPath: target.directory.appendingPathComponent($0).path) }
     }
 
     public static func installCommand(for target: ServiceTarget) -> String {
-        "cd \(quote(target.directory.path)) && npm install"
+        let install = stack(for: target.kind, at: target.directory, framework: target.framework)?.install ?? "npm install"
+        return "cd \(quote(target.directory.path)) && \(install)"
     }
 }

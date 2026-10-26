@@ -31,6 +31,7 @@ public enum ProjectGlyph {
         if kinds.contains(.frontend) { return "macwindow" }
         if kinds.contains(.backend) { return "server.rack" }
         if kinds.contains(.flutter) { return "iphone" }
+        if kinds.contains(.app) { return "terminal.fill" }
         if kinds.contains(.docker) { return "shippingbox" }
         return "folder.fill"
     }
