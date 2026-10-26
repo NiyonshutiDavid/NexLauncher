@@ -15,6 +15,16 @@ swift test            # unit tests
 Signing uses your first "Apple Development" identity (override with `SIGN_IDENTITY`), falling back to ad-hoc.
 Widgets need a real signature to load.
 
+## What's in v2
+
+- **App Store-style home**: greeting, CTA cards with illustrations (dismissible; *Settings → Git → Show dismissed tips again* brings them back), a *Running now* shelf and project cards with a Run pill.
+- **Brand colours from nexventures.net** in light and dark, plus themes (Nexventures Ember, Ocean, Forest, Violet, Graphite). *Settings → Appearance*.
+- **Collections and nested projects**: folders that hold several apps (e.g. `intern-sessions`, `mobileapp-sessions`) show as collections; apps with their own nested repositories list them inside.
+- **Cards ⇄ Folders switch** in the toolbar: the Folders view mirrors the disk, each row with Run, Terminal and Git.
+- **Embedded terminal** (SwiftTerm) on every card, row and detail page, usable in any folder, including nested apps.
+- **Add project** (＋ in the toolbar): new folder (optionally `git init`) or clone a repository with live progress.
+- **Profile** at the bottom of the sidebar opens Settings in the main window (⌘, too): profile, git identity and defaults, appearance, general, pins and overrides.
+
 ## Using it
 
 - **Projects** are detected from manifests (`package.json`, `manage.py`, `requirements.txt`, `pubspec.yaml`,
