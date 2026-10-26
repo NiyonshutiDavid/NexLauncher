@@ -1,0 +1,2 @@
+import NexUI
+print("NexLauncher")
