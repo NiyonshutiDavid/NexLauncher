@@ -38,6 +38,11 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var notifyCrash: Bool = true
     public var notifyAdded: Bool = true
     public var notifyOnlyInBackground: Bool = true
+    public var notifyAgents: Bool = true
+    // AI mode
+    public var defaultAgent: AgentKind = .claude
+    public var agentAutonomy: AgentAutonomy = .edit
+    public var customAgentCommand: String = ""
 
     public init(displayName: String, scanRoot: URL, showDockIcon: Bool, pinnedProjectIDs: [String]) {
         self.displayName = displayName
@@ -71,6 +76,10 @@ public struct AppSettings: Codable, Equatable, Sendable {
         notifyCrash = value(.notifyCrash) ?? true
         notifyAdded = value(.notifyAdded) ?? true
         notifyOnlyInBackground = value(.notifyOnlyInBackground) ?? true
+        notifyAgents = value(.notifyAgents) ?? true
+        defaultAgent = value(.defaultAgent) ?? .claude
+        agentAutonomy = value(.agentAutonomy) ?? .edit
+        customAgentCommand = value(.customAgentCommand) ?? ""
     }
 
     enum Keys: String, CodingKey {
@@ -78,6 +87,7 @@ public struct AppSettings: Codable, Equatable, Sendable {
         case appearance, theme, viewMode, dismissedCTAs, avatarColorHex, avatarPhotoPath, lastRun
         case defaultBranch, defaultPullStrategy, widgetsConfirmed
         case onboardingCompleted, notificationsEnabled, notifyReady, notifyCrash, notifyAdded, notifyOnlyInBackground
+        case notifyAgents, defaultAgent, agentAutonomy, customAgentCommand
     }
 
     public static func initials(from name: String) -> String {

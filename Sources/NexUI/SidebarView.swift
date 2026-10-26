@@ -19,6 +19,23 @@ struct SidebarView: View {
         model.page == .home && model.filter == f && !model.showOnlyUncommitted
     }
 
+    private func pageRow(_ title: String, symbol: String, count: Int, page: AppPage) -> some View {
+        let selected = model.page == page
+        return Button { model.page = page } label: {
+            HStack(spacing: 10) {
+                Image(systemName: symbol).frame(width: 20)
+                Text(title).font(.callout.weight(.medium))
+                Spacer()
+                if count > 0 { Text("\(count)").font(.caption.weight(.semibold)).foregroundStyle(theme.fg3) }
+            }
+            .padding(.horizontal, 12).padding(.vertical, 8)
+            .foregroundStyle(selected ? theme.accent : theme.fg)
+            .background(selected ? theme.accentSoft : .clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
@@ -45,6 +62,11 @@ struct SidebarView: View {
                         }
                         .buttonStyle(.plain)
                     }
+
+                    Text("WORKSPACE").font(.caption2.weight(.bold)).tracking(0.8).foregroundStyle(theme.fg3)
+                        .padding(.horizontal, 12).padding(.top, 14).padding(.bottom, 2)
+                    pageRow("Tasks", symbol: "checklist", count: model.openTaskCount, page: .tasks)
+                    pageRow("AI Assistant", symbol: "sparkles", count: model.agentRuns.filter(\.isRunning).count, page: .ai)
                 }
                 .padding(10)
             }

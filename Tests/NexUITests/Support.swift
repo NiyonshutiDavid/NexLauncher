@@ -48,6 +48,7 @@ final class Sandbox {
                         login: FakeLogin(),
                         notifier: notifier,
                         appIsActive: { [unowned self] in self.appIsActive },
+                        tasksFile: root.appendingPathComponent("tasks.json"),
                         snapshotDirectory: root.appendingPathComponent("shared"))
     }
 

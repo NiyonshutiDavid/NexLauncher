@@ -69,6 +69,13 @@ public final class AppModel {
     public internal(set) var notificationStatus: NotificationAuthorization = .notDetermined
     public let login: LaunchAtLogin
     public let devices: DevicesModel
+    let taskStore: TaskStore
+    /// Mirrors the task store so views update.
+    public internal(set) var tasks: [ProjectTask] = []
+    public let agents: AgentCatalog
+    public internal(set) var agentRuns: [AgentRun] = []
+    public var agentDraft: AgentDraft?
+    public internal(set) var agentError: String?
     let snapshotDirectory: URL
     /// Asks WidgetKit to refresh; replaced in tests.
     public var reloadWidgets: () -> Void = { WidgetCenter.shared.reloadAllTimelines() }
@@ -82,6 +89,8 @@ public final class AppModel {
                 notifier: Notifying? = nil,
                 appIsActive: (() -> Bool)? = nil,
                 devices: DevicesModel? = nil,
+                tasksFile: URL? = nil,
+                agents: AgentCatalog? = nil,
                 snapshotDirectory: URL? = nil) {
         self.settings = settings ?? SettingsStore()
         self.overrides = overrides ?? OverrideStore(fileURL: AppSettings.supportDirectory.appendingPathComponent("overrides.json"))
@@ -91,6 +100,9 @@ public final class AppModel {
         self.terminals = terminals ?? TerminalTabs()
         self.notifier = notifier ?? SystemNotifier()
         self.devices = devices ?? DevicesModel()
+        self.taskStore = TaskStore(fileURL: tasksFile ?? TaskStore.defaultURL)
+        self.tasks = taskStore.tasks
+        self.agents = agents ?? AgentCatalog()
         self.appIsActive = appIsActive ?? { NSApp.isActive }
         self.snapshotDirectory = snapshotDirectory ?? SharedContainer.defaultDirectory
         self.processes.onChange = { [weak self] in
@@ -167,7 +179,9 @@ extension AppModel {
         let pinned = settings.settings.pinnedProjectIDs.compactMap { id in
             names[id].map { WidgetSnapshot.PinnedProject(id: id, name: $0) }
         }
-        SharedContainer.write(WidgetSnapshot(running: running, pinned: pinned), to: snapshotDirectory)
+        let done = taskStore.recentlyDone(limit: 5).map { WidgetSnapshot.TaskSummary(title: $0.title, projectName: $0.projectName, done: true) }
+        let open = taskStore.tasks.filter { !$0.isDone }.prefix(5).map { WidgetSnapshot.TaskSummary(title: $0.title, projectName: $0.projectName, done: false) }
+        SharedContainer.write(WidgetSnapshot(running: running, pinned: pinned, tasks: done + open, openTaskCount: taskStore.openCount), to: snapshotDirectory)
         reloadWidgets()
     }
 

@@ -50,6 +50,11 @@ struct ProjectDetailView: View {
                     }
                     IconButton("terminal", help: "Open a terminal here") { model.showTerminal(at: folder, page: model.page) }
                     IconButton("folder", help: "Reveal in Finder") { NSWorkspace.shared.activateFileViewerSelecting([folder]) }
+                    if let project {
+                        Pill("Ask AI", style: .quiet, systemImage: "sparkles") {
+                            model.agentDraft = AgentDraft(projectID: project.id, text: "", taskID: nil); model.page = .ai
+                        }
+                    }
                 }
                 .padding(.top, 4)
             }
@@ -60,6 +65,7 @@ struct ProjectDetailView: View {
     @ViewBuilder private var content: some View {
         switch model.detailTab {
         case .overview: overview
+        case .tasks: if let project { ProjectTasksTab(model: model, project: project) }
         case .terminal: TerminalPanel(model: model, directory: folder)
         case .logs: if let project { LogPanel(model: model, project: project) }
         case .git: GitPanelView(model: model, root: folder, title: project?.name ?? folder.lastPathComponent)

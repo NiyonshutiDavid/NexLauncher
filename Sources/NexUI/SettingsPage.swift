@@ -19,6 +19,7 @@ struct SettingsPage: View {
         switch s {
         case .profile: return "person.crop.circle"
         case .git: return "arrow.triangle.branch"
+        case .ai: return "sparkles"
         case .appearance: return "paintpalette"
         case .notifications: return "bell"
         case .general: return "gearshape"
@@ -30,6 +31,7 @@ struct SettingsPage: View {
         let copy: (String, String, IllustrationKind) = {
             switch selected {
             case .profile: return ("You, at a glance", "Your name greets you every day and appears on your avatar.", .power)
+            case .ai: return ("Your AI assistant", "Choose the default agent, how much it may do on its own, and a custom agent command.", .robot)
             case .git: return ("Git, your way", "Set who you commit as and how Pull behaves for every repository.", .branchGraph)
             case .appearance: return ("Make it yours", "Light or dark, and an accent. The default uses the nexventures.net colours.", .swatches)
             case .notifications: return ("Stay in the loop", "Hear when a server is ready, when one stops, and when an agent finishes.", .widgets)
@@ -65,6 +67,7 @@ struct SettingsPage: View {
                     switch selected {
                     case .profile: ProfileSection(model: model)
                     case .git: GitSection(model: model)
+                    case .ai: AISection(model: model)
                     case .appearance: AppearanceSection(model: model)
                     case .notifications: NotificationsSection(model: model)
                     case .general: GeneralSection(model: model)
@@ -305,6 +308,44 @@ struct ThemeSwatchCard: View {
     }
 }
 
+// MARK: - AI
+
+private struct AISection: View {
+    @Bindable var model: AppModel
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            SettingsCard("Default agent") {
+                Picker("Agent", selection: Binding(get: { model.settings.settings.defaultAgent },
+                                                   set: { model.settings.settings.defaultAgent = $0; model.settings.save() })) {
+                    ForEach(AgentKind.allCases) { Text($0.displayName).tag($0) }
+                }
+                Picker("Autonomy", selection: Binding(get: { model.settings.settings.agentAutonomy },
+                                                      set: { model.settings.settings.agentAutonomy = $0; model.settings.save() })) {
+                    ForEach(AgentAutonomy.allCases, id: \.self) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                Text(model.settings.settings.agentAutonomy.explanation).font(.caption).foregroundStyle(theme.fg2)
+            }
+            SettingsCard("Custom agent", footer: "Any command-line agent. NexLauncher runs it in the project folder with the task in the variable $NEX_TASK (quoted for you if you leave it out).") {
+                TextField(#"e.g. aider --message "$NEX_TASK""#, text: Binding(get: { model.settings.settings.customAgentCommand },
+                                                                            set: { model.settings.settings.customAgentCommand = $0; model.settings.save() }))
+                    .textFieldStyle(.roundedBorder).font(.system(.callout, design: .monospaced))
+            }
+            SettingsCard("Sign-in", footer: "Each agent keeps its own sign-in. NexLauncher never sees or stores your keys.") {
+                ForEach(AgentKind.allCases.filter { $0.signInCommand != nil }) { kind in
+                    HStack {
+                        Text(kind.displayName).foregroundStyle(theme.fg)
+                        Spacer()
+                        Pill("Sign in", style: .quiet) { model.signIn(kind) }
+                    }
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Notifications
 
 private struct NotificationsSection: View {
@@ -336,6 +377,7 @@ private struct NotificationsSection: View {
                 Toggle("A service is ready (its port is up)", isOn: binding(\.notifyReady))
                 Toggle("A service stopped unexpectedly", isOn: binding(\.notifyCrash))
                 Toggle("A project was created or cloned", isOn: binding(\.notifyAdded))
+                Toggle("An AI agent finished a task", isOn: binding(\.notifyAgents))
                 Divider().overlay(theme.line)
                 Toggle("Only when NexLauncher isn't in front", isOn: binding(\.notifyOnlyInBackground))
             }

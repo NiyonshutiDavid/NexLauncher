@@ -49,6 +49,8 @@ private struct RootContent: View {
             if let project = model.project(id: id) { ProjectDetailView(model: model, project: project, folder: project.root) }
             else { HomeView(model: model) }
         case .folder(let path): ProjectDetailView(model: model, project: nil, folder: URL(fileURLWithPath: path))
+        case .tasks: TasksPage(model: model)
+        case .ai: AIPage(model: model)
         }
     }
 }

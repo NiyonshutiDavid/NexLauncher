@@ -21,12 +21,39 @@ public struct WidgetSnapshot: Codable, Equatable, Sendable {
         }
     }
 
+    public struct TaskSummary: Codable, Equatable, Sendable {
+        public let title: String
+        public let projectName: String
+        public let done: Bool
+        public init(title: String, projectName: String, done: Bool) {
+            self.title = title
+            self.projectName = projectName
+            self.done = done
+        }
+    }
+
     public var running: [Running]
     public var pinned: [PinnedProject]
+    /// Recently completed tasks first, then open ones.
+    public var tasks: [TaskSummary] = []
+    public var openTaskCount: Int = 0
 
-    public init(running: [Running], pinned: [PinnedProject]) {
+    public init(running: [Running], pinned: [PinnedProject], tasks: [TaskSummary] = [], openTaskCount: Int = 0) {
         self.running = running
         self.pinned = pinned
+        self.tasks = tasks
+        self.openTaskCount = openTaskCount
+    }
+
+    enum CodingKeys: String, CodingKey { case running, pinned, tasks, openTaskCount }
+
+    /// Tolerant: a snapshot written by an older build (no tasks) still decodes.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        running = (try? c.decode([Running].self, forKey: .running)) ?? []
+        pinned = (try? c.decode([PinnedProject].self, forKey: .pinned)) ?? []
+        tasks = (try? c.decode([TaskSummary].self, forKey: .tasks)) ?? []
+        openTaskCount = (try? c.decode(Int.self, forKey: .openTaskCount)) ?? 0
     }
 }
 

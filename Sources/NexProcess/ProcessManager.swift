@@ -26,6 +26,90 @@ public struct ServiceID: Hashable, Sendable {
     }
 }
 
+/// Spawns `/bin/zsh -lc <command>` in its own session (pgid == pid) with stdout+stderr on one pipe.
+public enum ProcessSpawner {
+    public static func spawn(command: String, directory: URL, environment: [String: String] = [:]) throws -> (pid: pid_t, fd: Int32) {
+        var fds: [Int32] = [0, 0]
+        guard pipe(&fds) == 0 else { throw POSIXError(.EMFILE) }
+        var actions: posix_spawn_file_actions_t? = nil
+        posix_spawn_file_actions_init(&actions)
+        defer { posix_spawn_file_actions_destroy(&actions) }
+        posix_spawn_file_actions_addopen(&actions, 0, "/dev/null", O_RDONLY, 0)
+        posix_spawn_file_actions_adddup2(&actions, fds[1], 1)
+        posix_spawn_file_actions_adddup2(&actions, fds[1], 2)
+        posix_spawn_file_actions_addclose(&actions, fds[0])
+        posix_spawn_file_actions_addclose(&actions, fds[1])
+        posix_spawn_file_actions_addchdir(&actions, directory.path)
+
+        var attrs: posix_spawnattr_t? = nil
+        posix_spawnattr_init(&attrs)
+        defer { posix_spawnattr_destroy(&attrs) }
+        // New session (pgid == pid), and don't leak the app's other descriptors (e.g. git's pipes) into the child.
+        posix_spawnattr_setflags(&attrs, Int16(POSIX_SPAWN_SETSID | POSIX_SPAWN_CLOEXEC_DEFAULT))
+
+        let args = ["/bin/zsh", "-lc", command]
+        let cArgs = args.map { strdup($0) } + [nil]
+        defer { cArgs.forEach { free($0) } }
+        var merged = ProcessInfo.processInfo.environment
+        merged.merge(environment) { $1 }
+        var cEnv: [UnsafeMutablePointer<CChar>?] = merged.map { strdup("\($0.key)=\($0.value)") } + [nil]
+        defer { cEnv.forEach { free($0) } }
+        var pid: pid_t = 0
+        let rc = cEnv.withUnsafeMutableBufferPointer { envp in
+            posix_spawn(&pid, "/bin/zsh", &actions, &attrs, cArgs, environment.isEmpty ? environ : envp.baseAddress)
+        }
+        close(fds[1])
+        guard rc == 0 else {
+            close(fds[0])
+            throw POSIXError(POSIXErrorCode(rawValue: rc) ?? .EIO)
+        }
+        return (pid, fds[0])
+    }
+
+    /// Reads lines on a background thread and reaps the process; callbacks arrive off the main thread.
+    public static func pump(fd: Int32, pid: pid_t, onLines: @escaping @Sendable ([String]) -> Void, onExit: @escaping @Sendable (Int32) -> Void) {
+        let done = DispatchGroup()
+        done.enter()
+        Thread.detachNewThread {
+            var buffer = Data()
+            var chunk = [UInt8](repeating: 0, count: 8192)
+            while true {
+                let n = read(fd, &chunk, chunk.count)
+                if n <= 0 { break }
+                buffer.append(contentsOf: chunk[0..<n])
+                var lines: [String] = []
+                while let nl = buffer.firstIndex(of: 0x0A) {
+                    lines.append(String(decoding: buffer[buffer.startIndex..<nl], as: UTF8.self))
+                    buffer.removeSubrange(buffer.startIndex...nl)
+                }
+                if !lines.isEmpty { onLines(lines) }
+            }
+            if !buffer.isEmpty { onLines([String(decoding: buffer, as: UTF8.self)]) }
+            close(fd)
+            done.leave()
+        }
+        Thread.detachNewThread {
+            var status: Int32 = 0
+            while waitpid(pid, &status, 0) == -1 && errno == EINTR {}
+            killpg(pid, SIGTERM)
+            _ = done.wait(timeout: .now() + 1)            // let the last lines arrive first
+            onExit((status & 0x7f) == 0 ? (status >> 8) & 0xff : 128 + (status & 0x7f))
+        }
+    }
+
+    /// SIGTERM to the whole group, then SIGKILL if anything is still alive after the grace period.
+    public static func terminateGroup(_ pid: pid_t, grace: TimeInterval = 3) async {
+        guard pid > 0 else { return }
+        killpg(pid, SIGTERM)
+        let deadline = Date().addingTimeInterval(grace)
+        while Date() < deadline {
+            if killpg(pid, 0) != 0 { return }
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+        killpg(pid, SIGKILL)
+    }
+}
+
 /// Owns the dev-server processes. Each service runs under `/bin/zsh -lc` in its own session
 /// (so pgid == pid), which lets Stop signal the whole tree.
 @MainActor @Observable
@@ -73,45 +157,13 @@ public final class ProcessManager {
             return
         }
         do {
-            let (pid, readFD) = try Self.spawn(command: target.command, directory: target.directory)
+            let (pid, readFD) = try ProcessSpawner.spawn(command: target.command, directory: target.directory)
             pids[id] = pid
             set(id, .starting)
             Self.pump(readFD: readFD, pid: pid, id: id, manager: self)
         } catch {
             set(id, .failed("Could not start: \(error.localizedDescription)"))
         }
-    }
-
-    private static func spawn(command: String, directory: URL) throws -> (pid_t, Int32) {
-        var fds: [Int32] = [0, 0]
-        guard pipe(&fds) == 0 else { throw POSIXError(.EMFILE) }
-        var actions: posix_spawn_file_actions_t? = nil
-        posix_spawn_file_actions_init(&actions)
-        defer { posix_spawn_file_actions_destroy(&actions) }
-        posix_spawn_file_actions_addopen(&actions, 0, "/dev/null", O_RDONLY, 0)
-        posix_spawn_file_actions_adddup2(&actions, fds[1], 1)
-        posix_spawn_file_actions_adddup2(&actions, fds[1], 2)
-        posix_spawn_file_actions_addclose(&actions, fds[0])
-        posix_spawn_file_actions_addclose(&actions, fds[1])
-        posix_spawn_file_actions_addchdir(&actions, directory.path)
-
-        var attrs: posix_spawnattr_t? = nil
-        posix_spawnattr_init(&attrs)
-        defer { posix_spawnattr_destroy(&attrs) }
-        // New session (pgid == pid), and don't leak the app's other descriptors (e.g. git's pipes) into the server.
-        posix_spawnattr_setflags(&attrs, Int16(POSIX_SPAWN_SETSID | POSIX_SPAWN_CLOEXEC_DEFAULT))
-
-        let args = ["/bin/zsh", "-lc", command]
-        let cArgs = args.map { strdup($0) } + [nil]
-        defer { cArgs.forEach { free($0) } }
-        var pid: pid_t = 0
-        let rc = posix_spawn(&pid, "/bin/zsh", &actions, &attrs, cArgs, environ)
-        close(fds[1])
-        guard rc == 0 else {
-            close(fds[0])
-            throw POSIXError(POSIXErrorCode(rawValue: rc) ?? .EIO)
-        }
-        return (pid, fds[0])
     }
 
     /// Reader thread feeds log lines to the main actor; a second thread reaps the process.

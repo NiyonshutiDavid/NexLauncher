@@ -5,7 +5,7 @@ import NexTerminal
 import AppKit
 
 public enum SettingsSection: String, CaseIterable, Identifiable, Sendable {
-    case profile = "Profile", git = "Git", appearance = "Appearance", notifications = "Notifications", general = "General", projects = "Projects"
+    case profile = "Profile", git = "Git", ai = "AI", appearance = "Appearance", notifications = "Notifications", general = "General", projects = "Projects"
     public var id: String { rawValue }
 }
 
@@ -15,6 +15,8 @@ public enum AppPage: Equatable, Sendable {
     case collection(String)      // ProjectNode id
     case project(String)         // Project id
     case folder(String)          // any folder (e.g. a new project with no manifests yet)
+    case tasks
+    case ai
 }
 
 public enum AddProjectMode: Equatable, Sendable { case newFolder, clone }
@@ -157,7 +159,7 @@ extension AppModel {
 public enum EmptyStateKind: Equatable, Sendable { case noProjects, noResults }
 
 public enum DetailTab: String, CaseIterable, Identifiable, Sendable {
-    case overview = "Overview", terminal = "Terminal", logs = "Logs", git = "Git", files = "Files"
+    case overview = "Overview", tasks = "Tasks", terminal = "Terminal", logs = "Logs", git = "Git", files = "Files"
     public var id: String { rawValue }
 }
 

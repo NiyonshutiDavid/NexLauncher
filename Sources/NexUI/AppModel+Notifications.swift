@@ -6,7 +6,7 @@ extension AppModel {
     var notificationPrefs: NotificationPrefs {
         let s = settings.settings
         return NotificationPrefs(enabled: s.notificationsEnabled, ready: s.notifyReady, crash: s.notifyCrash,
-                                 added: s.notifyAdded, onlyInBackground: s.notifyOnlyInBackground)
+                                 added: s.notifyAdded, onlyInBackground: s.notifyOnlyInBackground, agents: s.notifyAgents)
     }
 
     /// Called on every service state change: posts "ready" and "stopped unexpectedly" notifications.
