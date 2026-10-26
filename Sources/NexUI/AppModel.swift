@@ -4,6 +4,7 @@ import WidgetKit
 import NexCore
 import NexProcess
 import NexGit
+import NexTerminal
 
 public struct GitBadge: Equatable, Sendable {
     public var changes = 0, ahead = 0, behind = 0, repoCount = 0
@@ -25,12 +26,20 @@ public enum ProjectFilter: String, CaseIterable, Identifiable, Sendable {
 
 @MainActor @Observable
 public final class AppModel {
+    /// Every runnable app, flattened (collections and nested apps included).
     public private(set) var projects: [Project] = []
+    /// Apps and collections as they sit on disk.
+    public private(set) var tree: [ProjectNode] = []
     public private(set) var isScanning = false
     public var searchText = ""
     public var filter: ProjectFilter = .all
     public private(set) var gitBadges: [String: GitBadge] = [:]
     public var pendingInstall: PendingInstall?
+    public var page: AppPage = .home
+    public var sheet: AppSheet?
+    public var showOnlyUncommitted = false
+    /// Global git name+email present? Starts true so the CTA doesn't flash before the first check.
+    public var gitIdentitySet = true
     private var hasScanned = false
     private var queuedURL: URL?
     /// Test seam: replaces `npm install`.
@@ -40,6 +49,8 @@ public final class AppModel {
     public let overrides: OverrideStore
     public let processes: ProcessManager
     public let git: GitService
+    public let terminals: TerminalTabs
+    public let login: LaunchAtLogin
     let snapshotDirectory: URL
     /// Asks WidgetKit to refresh; replaced in tests.
     public var reloadWidgets: () -> Void = { WidgetCenter.shared.reloadAllTimelines() }
@@ -48,11 +59,15 @@ public final class AppModel {
                 overrides: OverrideStore? = nil,
                 processes: ProcessManager? = nil,
                 git: GitService = GitService(),
+                login: LoginItemControlling? = nil,
+                terminals: TerminalTabs? = nil,
                 snapshotDirectory: URL? = nil) {
         self.settings = settings ?? SettingsStore()
         self.overrides = overrides ?? OverrideStore(fileURL: AppSettings.supportDirectory.appendingPathComponent("overrides.json"))
         self.processes = processes ?? ProcessManager()
         self.git = git
+        self.login = LaunchAtLogin(controller: login ?? SMLoginItem())
+        self.terminals = terminals ?? TerminalTabs()
         self.snapshotDirectory = snapshotDirectory ?? SharedContainer.defaultDirectory
         self.processes.onChange = { [weak self] in self?.publishSnapshot() }
     }
@@ -70,6 +85,7 @@ public final class AppModel {
             case .flutter: guard project.targets.contains(where: { $0.kind == .flutter }) else { return false }
             case .running: guard isRunning(project) else { return false }
             }
+            if showOnlyUncommitted, (gitBadges[project.id]?.changes ?? 0) == 0 { return false }
             return query.isEmpty || project.name.localizedCaseInsensitiveContains(query)
         }
     }
@@ -83,11 +99,12 @@ public final class AppModel {
         defer { isScanning = false }
         let root = settings.settings.scanRoot
         let scanner = ProjectScanner(overrides: overrides)
-        projects = await Task.detached { scanner.scan(root: root) }.value
+        tree = await Task.detached { scanner.scanTree(root: root) }.value
+        projects = tree.flatMap(\.apps)
         publishSnapshot()
         hasScanned = true
         if let url = queuedURL { queuedURL = nil; await handle(url: url) }   // a widget tap that launched the app
-        Task { await refreshGitBadges() }
+        Task { await refreshGitBadges(); await refreshGitIdentity() }
     }
 
     /// Summarises each project's repositories (change count, ahead/behind) for the card badges.

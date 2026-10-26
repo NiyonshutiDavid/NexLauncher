@@ -5,6 +5,15 @@ import NexProcess
 public enum RunAction: String, Hashable, Sendable {
     case frontend = "Frontend", backend = "Backend", both = "Both", flutter = "Flutter", docker = "Docker"
 
+    /// The action that corresponds to a set of kinds (used to remember the last run).
+    public static func from(kinds: Set<ServiceKind>) -> RunAction {
+        if kinds.contains(.frontend) && kinds.contains(.backend) { return .both }
+        if kinds.contains(.frontend) { return .frontend }
+        if kinds.contains(.backend) { return .backend }
+        if kinds.contains(.flutter) { return .flutter }
+        return .docker
+    }
+
     public var kinds: Set<ServiceKind> {
         switch self {
         case .frontend: return [.frontend]
@@ -46,6 +55,8 @@ extension AppModel {
             pendingInstall = PendingInstall(project: project, kinds: kinds, flutterDevice: flutterDevice)
             return
         }
+        settings.settings.lastRun = LastRun(projectID: project.id, action: RunAction.from(kinds: kinds).rawValue)
+        settings.save()
         for var target in targets {
             if target.kind == .flutter, let device = flutterDevice, target.command.hasPrefix("cd ") {
                 target.command = CommandBuilder.command(for: .flutter, at: target.directory, framework: nil, flutterDevice: device)

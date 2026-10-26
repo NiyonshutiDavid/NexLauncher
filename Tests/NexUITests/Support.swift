@@ -2,7 +2,13 @@ import Foundation
 import NexCore
 import NexProcess
 import NexGit
+import NexTerminal
 @testable import NexUI
+
+final class FakeLogin: LoginItemControlling, @unchecked Sendable {
+    var isEnabled = false
+    func setEnabled(_ on: Bool) throws { isEnabled = on }
+}
 
 final class Sandbox {
     let root: URL
@@ -28,6 +34,7 @@ final class Sandbox {
                         overrides: OverrideStore(fileURL: root.appendingPathComponent("overrides.json")),
                         processes: ProcessManager(killTimeout: 0.5),
                         git: GitService(),
+                        login: FakeLogin(),
                         snapshotDirectory: root.appendingPathComponent("shared"))
     }
 
