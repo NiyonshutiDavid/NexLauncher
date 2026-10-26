@@ -28,14 +28,6 @@ struct NexLauncherApp: App {
             SettingsCommands(model: model)
         }
 
-        MenuBarExtra {
-            MenuBarContent(model: model)
-                .nexTheme(model.settings.settings.theme, appearance: model.settings.settings.appearance)
-        } label: {
-            Image(systemName: "bolt.horizontal.circle.fill")
-            if !model.menuBarTitle.isEmpty { Text(model.menuBarTitle) }
-        }
-        .menuBarExtraStyle(.window)
     }
 }
 
@@ -58,6 +50,7 @@ struct SettingsCommands: Commands {
 final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     /// Owned here (not by a window) so Quit can always see running services and terminals, even with no window open.
     let model = AppModel()
+    private var statusBar: StatusBarController?
 
     /// The notification delegate must be in place before launch finishes, or a click that launched the app is lost.
     func applicationWillFinishLaunching(_ notification: Notification) {
@@ -67,8 +60,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        statusBar = StatusBarController(model: model)        // menu bar item + ⌥⌘L quick panel
         Task { await model.refreshNotificationStatus() }
     }
+
+    @objc func showQuickPanel() { statusBar?.togglePanel() }
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
         [.banner, .sound]
@@ -103,6 +99,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
                 menu.addItem(item)
             }
         }
+        menu.addItem(.separator())
+        let quick = NSMenuItem(title: "Quick Panel (⌥⌘L)", action: #selector(showQuickPanel), keyEquivalent: "")
+        quick.target = self
+        menu.addItem(quick)
         return menu
     }
 

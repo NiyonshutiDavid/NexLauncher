@@ -32,7 +32,7 @@ import NexCore
         }
     }
 
-    @Test func thereAreEightIllustrations() {
-        #expect(IllustrationKind.allCases.count == 8)
+    @Test func thereAreFourteenIllustrations() {
+        #expect(IllustrationKind.allCases.count == 14)
     }
 }

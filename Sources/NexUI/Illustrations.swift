@@ -3,6 +3,7 @@ import NexCore
 
 public enum IllustrationKind: CaseIterable, Sendable {
     case rocket, branchGraph, terminal, swatches, folders, telescope, widgets, power
+    case pin, play, layers, phone, checklist, robot
 }
 
 /// Flat vector illustrations drawn in code. They scale to their container and use only theme colours,
@@ -45,6 +46,12 @@ private struct Painter {
         case .telescope: telescope()
         case .widgets: widgets()
         case .power: power()
+        case .pin: pin()
+        case .play: play()
+        case .layers: layers()
+        case .phone: phone()
+        case .checklist: checklist()
+        case .robot: robot()
         }
     }
 
@@ -203,5 +210,85 @@ private struct Painter {
         stroke(Path { p in p.addArc(center: CGPoint(x: 50, y: 38), radius: 9, startAngle: .degrees(-60), endAngle: .degrees(240), clockwise: false) }, theme.accent, 4)
         stroke(Path { p in p.move(to: CGPoint(x: 50, y: 25)); p.addLine(to: CGPoint(x: 50, y: 37)) }, theme.accent, 4)
         sparkle(18, 28, 4, theme.accent); sparkle(84, 44, 3.5, theme.fg3)
+    }
+
+    // MARK: v3 drawings
+
+    private func pin() {
+        var c = ctx
+        c.translateBy(x: 50, y: 48); c.rotate(by: .degrees(28))
+        let p = Painter(ctx: c, theme: theme)
+        p.fill(p.rounded(CGRect(x: -14, y: -30, width: 28, height: 10), 4), theme.accentHover)
+        var body = Path()
+        body.move(to: CGPoint(x: -10, y: -20)); body.addLine(to: CGPoint(x: 10, y: -20))
+        body.addLine(to: CGPoint(x: 14, y: 4)); body.addLine(to: CGPoint(x: -14, y: 4)); body.closeSubpath()
+        p.fill(body, theme.accent)
+        p.fill(p.rounded(CGRect(x: -20, y: 2, width: 40, height: 8), 4), theme.accentHover)
+        p.stroke(Path { q in q.move(to: CGPoint(x: 0, y: 10)); q.addLine(to: CGPoint(x: 0, y: 34)) }, theme.fg3, 3)
+        sparkle(22, 24, 5, theme.accent); sparkle(80, 72, 4, theme.fg3); dot(76, 26, 2.5, theme.accent.opacity(0.6))
+    }
+
+    private func play() {
+        dot(50, 52, 30, theme.accent)
+        dot(50, 52, 24, theme.accentHover)
+        var tri = Path()
+        tri.move(to: CGPoint(x: 42, y: 38)); tri.addLine(to: CGPoint(x: 64, y: 52)); tri.addLine(to: CGPoint(x: 42, y: 66)); tri.closeSubpath()
+        fill(tri, .white)
+        for (i, a) in [(-0.6), (-0.2), (0.2)].enumerated() {
+            let r = 40.0 + Double(i) * 6
+            stroke(Path { p in p.addArc(center: CGPoint(x: 50, y: 52), radius: r, startAngle: .radians(a - 0.25), endAngle: .radians(a + 0.25), clockwise: false) },
+                   theme.accent.opacity(0.5 - Double(i) * 0.12), 3)
+        }
+        sparkle(20, 22, 5, theme.accent); dot(82, 80, 2.5, theme.fg3)
+    }
+
+    private func layers() {
+        func layer(_ y: CGFloat, _ color: Color) {
+            var d = Path()
+            d.move(to: CGPoint(x: 50, y: y - 14)); d.addLine(to: CGPoint(x: 80, y: y)); d.addLine(to: CGPoint(x: 50, y: y + 14)); d.addLine(to: CGPoint(x: 20, y: y)); d.closeSubpath()
+            fill(d, color)
+        }
+        layer(66, theme.accent.opacity(0.45)); layer(52, theme.accentHover.opacity(0.8)); layer(38, theme.accent)
+        stroke(Path { p in p.move(to: CGPoint(x: 50, y: 24)); p.addLine(to: CGPoint(x: 80, y: 38)); p.addLine(to: CGPoint(x: 50, y: 52)); p.addLine(to: CGPoint(x: 20, y: 38)); p.closeSubpath() }, .white.opacity(0.6), 1.2)
+        sparkle(84, 18, 5, theme.accent); dot(16, 76, 2.5, theme.fg3)
+    }
+
+    private func phone() {
+        fill(rounded(CGRect(x: 32, y: 14, width: 36, height: 70).offsetBy(dx: 0, dy: 3), 9), .black.opacity(0.12))
+        fill(rounded(CGRect(x: 32, y: 14, width: 36, height: 70), 9), ink)
+        fill(rounded(CGRect(x: 35, y: 20, width: 30, height: 58), 6), theme.accentSoft)
+        fill(rounded(CGRect(x: 44, y: 16, width: 12, height: 3), 1.5), .white.opacity(0.4))
+        fill(rounded(CGRect(x: 39, y: 26, width: 22, height: 14), 4), theme.accent)
+        fill(rounded(CGRect(x: 39, y: 44, width: 22, height: 4), 2), theme.fg3.opacity(0.6))
+        fill(rounded(CGRect(x: 39, y: 52, width: 14, height: 4), 2), theme.fg3.opacity(0.4))
+        dot(44, 68, 4, theme.accent); dot(56, 68, 4, theme.accentHover)
+        sparkle(20, 26, 5, theme.accent); sparkle(82, 70, 4, theme.fg3)
+    }
+
+    private func checklist() {
+        fill(rounded(CGRect(x: 24, y: 18, width: 52, height: 66), 10), theme.surface)
+        stroke(rounded(CGRect(x: 24, y: 18, width: 52, height: 66), 10), theme.line, 1.2)
+        fill(rounded(CGRect(x: 40, y: 13, width: 20, height: 9), 4), theme.accentHover)
+        for (i, done) in [true, true, false].enumerated() {
+            let y = 34 + CGFloat(i) * 16
+            fill(rounded(CGRect(x: 31, y: y - 5, width: 10, height: 10), 3), done ? theme.accent : theme.accentSoft)
+            if done { stroke(Path { p in p.move(to: CGPoint(x: 33.5, y: y)); p.addLine(to: CGPoint(x: 35.5, y: y + 2.5)); p.addLine(to: CGPoint(x: 39, y: y - 2.5)) }, .white, 1.8) }
+            fill(rounded(CGRect(x: 45, y: y - 2, width: done ? 22 : 18, height: 4), 2), theme.fg3.opacity(done ? 0.35 : 0.7))
+        }
+        sparkle(82, 22, 5, theme.accent); dot(18, 74, 2.5, theme.fg3)
+    }
+
+    private func robot() {
+        stroke(Path { p in p.move(to: CGPoint(x: 50, y: 22)); p.addLine(to: CGPoint(x: 50, y: 30)) }, theme.fg3, 3)
+        dot(50, 20, 4, theme.accent)
+        fill(rounded(CGRect(x: 26, y: 30, width: 48, height: 38), 12), theme.surface)
+        stroke(rounded(CGRect(x: 26, y: 30, width: 48, height: 38), 12), theme.line, 1.2)
+        fill(rounded(CGRect(x: 32, y: 38, width: 36, height: 18), 8), ink)
+        dot(42, 47, 4, theme.accent); dot(58, 47, 4, theme.accent)
+        fill(rounded(CGRect(x: 43, y: 60, width: 14, height: 3), 1.5), theme.fg3.opacity(0.6))
+        fill(rounded(CGRect(x: 20, y: 42, width: 6, height: 14), 3), theme.accentHover)
+        fill(rounded(CGRect(x: 74, y: 42, width: 6, height: 14), 3), theme.accentHover)
+        fill(rounded(CGRect(x: 34, y: 70, width: 32, height: 12), 6), theme.accent)
+        sparkle(18, 22, 5, theme.accent); sparkle(84, 26, 4, theme.fg3); sparkle(82, 78, 3.5, theme.accent)
     }
 }
