@@ -104,3 +104,20 @@ extension AppModel {
     /// Publishes running/pinned state for the widgets. Filled in by the widget task.
     func publishSnapshot() {}
 }
+
+extension AppModel {
+    /// Text shown beside the menu bar icon: the number of running services, or nothing.
+    public var menuBarTitle: String {
+        processes.runningCount > 0 ? "\(processes.runningCount)" : ""
+    }
+
+    public var shouldConfirmQuit: Bool { processes.runningCount > 0 }
+}
+
+import AppKit
+extension AppModel {
+    /// Shows or hides the Dock icon according to settings (the menu bar item always stays).
+    public func applyDockIconPolicy() {
+        NSApp.setActivationPolicy(settings.settings.showDockIcon ? .regular : .accessory)
+    }
+}
