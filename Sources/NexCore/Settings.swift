@@ -31,6 +31,13 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var defaultBranch: String = "main"
     public var defaultPullStrategy: PullPreference = .ffOnly
     public var widgetsConfirmed: Bool = false
+    // polish
+    public var onboardingCompleted: Bool = false
+    public var notificationsEnabled: Bool = false
+    public var notifyReady: Bool = true
+    public var notifyCrash: Bool = true
+    public var notifyAdded: Bool = true
+    public var notifyOnlyInBackground: Bool = true
 
     public init(displayName: String, scanRoot: URL, showDockIcon: Bool, pinnedProjectIDs: [String]) {
         self.displayName = displayName
@@ -58,12 +65,19 @@ public struct AppSettings: Codable, Equatable, Sendable {
         defaultBranch = value(.defaultBranch) ?? "main"
         defaultPullStrategy = value(.defaultPullStrategy) ?? .ffOnly
         widgetsConfirmed = value(.widgetsConfirmed) ?? false
+        onboardingCompleted = value(.onboardingCompleted) ?? false
+        notificationsEnabled = value(.notificationsEnabled) ?? false
+        notifyReady = value(.notifyReady) ?? true
+        notifyCrash = value(.notifyCrash) ?? true
+        notifyAdded = value(.notifyAdded) ?? true
+        notifyOnlyInBackground = value(.notifyOnlyInBackground) ?? true
     }
 
     enum Keys: String, CodingKey {
         case displayName, scanRoot, showDockIcon, pinnedProjectIDs
         case appearance, theme, viewMode, dismissedCTAs, avatarColorHex, avatarPhotoPath, lastRun
         case defaultBranch, defaultPullStrategy, widgetsConfirmed
+        case onboardingCompleted, notificationsEnabled, notifyReady, notifyCrash, notifyAdded, notifyOnlyInBackground
     }
 
     public static func initials(from name: String) -> String {

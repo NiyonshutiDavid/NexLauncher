@@ -40,3 +40,21 @@ import Foundation
         #expect(AppSettings.initials(from: "  a  b  c ") == "AB")
     }
 }
+
+@Suite struct SettingsPolishTests {
+    @Test func olderFilesGetOnboardingAndNotificationDefaults() throws {
+        let json = #"{"displayName":"D","scanRoot":"file:///tmp/","showDockIcon":true,"pinnedProjectIDs":[]}"#
+        let s = try JSONDecoder().decode(AppSettings.self, from: Data(json.utf8))
+        #expect(!s.onboardingCompleted)
+        #expect(!s.notificationsEnabled)
+        #expect(s.notifyReady && s.notifyCrash && s.notifyAdded)
+        #expect(s.notifyOnlyInBackground)
+    }
+
+    @Test func polishFieldsRoundTrip() throws {
+        var s = AppSettings.defaults()
+        s.onboardingCompleted = true; s.notificationsEnabled = true
+        s.notifyReady = false; s.notifyCrash = false; s.notifyAdded = false; s.notifyOnlyInBackground = false
+        #expect(try JSONDecoder().decode(AppSettings.self, from: JSONEncoder().encode(s)) == s)
+    }
+}
