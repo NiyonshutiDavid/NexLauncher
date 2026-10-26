@@ -44,32 +44,43 @@ struct HomeView: View {
             .padding(32)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .contentMargins(.top, GlassHeaderMetrics.inset, for: .scrollContent)
-        .glassHeader(title: headerTitle) {
-            EmptyView()
-        } trailing: {
-            GlassSearchField(text: $model.searchText)
-            Picker("View", selection: $model.viewMode) {
-                Label("Cards", systemImage: "square.grid.2x2").tag(ViewMode.cards)
-                Label("Folders", systemImage: "list.bullet.indent").tag(ViewMode.folders)
+        .searchable(text: $model.searchText, placement: .toolbar, prompt: "Search projects")
+        .navigationTitle("")
+        .toolbar {
+            ToolbarItem {
+                Picker("View", selection: $model.viewMode) {
+                    Label("Cards", systemImage: "square.grid.2x2").tag(ViewMode.cards)
+                    Label("Folders", systemImage: "list.bullet.indent").tag(ViewMode.folders)
+                }
+                .pickerStyle(.segmented)
+                .help("Switch between cards and the folder structure")
             }
-            .pickerStyle(.segmented).labelsHidden().frame(width: 116)
-            .help("Switch between cards and the folder structure")
-            Menu {
-                Button("New folder…", systemImage: "folder.badge.plus") { model.sheet = .addProject(.newFolder) }
-                Button("Clone repository…", systemImage: "arrow.down.circle") { model.sheet = .addProject(.clone) }
-            } label: {
-                Image(systemName: "plus").font(.system(size: 14, weight: .bold)).foregroundStyle(theme.onAccent)
-                    .frame(width: 32, height: 32)
-                    .background(theme.accent, in: Circle())                       // filled, so it reads as the primary action
-                    .overlay(Circle().strokeBorder(.white.opacity(0.28), lineWidth: 1))
-                    .shadow(color: theme.accent.opacity(0.4), radius: 6, y: 2)
-                    .contentShape(Circle())
+            ToolbarItem { AddProjectToolbarButton(model: model) }
+            ToolbarItem {
+                Button { Task { await model.refresh() } } label: { Label("Refresh", systemImage: "arrow.clockwise") }
+                    .help("Scan for projects again")
             }
-            .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize().help("Add a project")
-            IconButton("arrow.clockwise", help: "Scan for projects again") { Task { await model.refresh() } }
         }
     }
 
-    private var headerTitle: String { model.showOnlyUncommitted ? "Unsaved changes" : "Projects" }
+}
+
+/// The primary "add" action: a filled accent circle so it stands out from the other toolbar buttons.
+struct AddProjectToolbarButton: View {
+    @Bindable var model: AppModel
+    @Environment(\.theme) private var theme
+
+    var body: some View {
+        Menu {
+            Button("New folder…", systemImage: "folder.badge.plus") { model.sheet = .addProject(.newFolder) }
+            Button("Clone repository…", systemImage: "arrow.down.circle") { model.sheet = .addProject(.clone) }
+        } label: {
+            Image(systemName: "plus").font(.system(size: 13, weight: .bold)).foregroundStyle(theme.onAccent)
+                .frame(width: 28, height: 28)
+                .background(theme.accent, in: Circle())
+                .contentShape(Circle())
+        }
+        .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
+        .help("Add a project")
+    }
 }

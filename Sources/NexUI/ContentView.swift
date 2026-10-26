@@ -20,12 +20,12 @@ private struct RootContent: View {
     var body: some View {
         NavigationSplitView {
             SidebarView(model: model)
-                .navigationSplitViewColumnWidth(min: 200, ideal: 230)
+                .navigationSplitViewColumnWidth(min: 210, ideal: 240)
+                .toolbar(removing: .sidebarToggle)            // WhatsApp-style: only the window controls up there
         } detail: {
             page
                 .background(theme.canvas)
         }
-        .toolbar(.hidden, for: .windowToolbar)
         .overlay {
             if model.showOnboarding { OnboardingView(model: model).transition(.opacity) }
         }

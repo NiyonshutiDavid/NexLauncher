@@ -27,16 +27,13 @@ struct ProjectDetailView: View {
             .padding(32)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .contentMargins(.top, GlassHeaderMetrics.inset, for: .scrollContent)
-        .glassHeader(title: project?.name ?? folder.lastPathComponent) {
-            Button { model.page = .home } label: {
-                Label("Projects", systemImage: "chevron.left").labelStyle(.titleAndIcon).font(.callout.weight(.medium)).foregroundStyle(theme.accent)
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                Button { model.page = .home } label: { Label("Projects", systemImage: "chevron.left") }
+                    .help("Back to projects")
             }
-            .buttonStyle(.plain)
-            Divider().frame(height: 18)
-        } trailing: {
-            if let project { RunPill(model: model, project: project) }
         }
+        .navigationTitle(project?.name ?? folder.lastPathComponent)
     }
 
     private var header: some View {

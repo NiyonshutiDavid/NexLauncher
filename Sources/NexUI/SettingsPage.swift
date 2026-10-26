@@ -43,7 +43,7 @@ struct SettingsPage: View {
                 }
                 Spacer()
             }
-            .frame(width: 210).padding(24).padding(.top, GlassHeaderMetrics.inset - 24)
+            .frame(width: 210).padding(24)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
@@ -56,13 +56,18 @@ struct SettingsPage: View {
                     case .projects: ProjectsSection(model: model)
                     }
                 }
-                .padding(.bottom, 28).padding(.trailing, 32)
+                .padding(.vertical, 28).padding(.trailing, 32)
                 .frame(maxWidth: 720, alignment: .leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .contentMargins(.top, GlassHeaderMetrics.inset, for: .scrollContent)
         }
-        .glassHeader(title: "Settings")
+        .navigationTitle("Settings")
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                Button { model.page = .home } label: { Label("Projects", systemImage: "chevron.left") }
+                    .help("Back to projects")
+            }
+        }
         .onChange(of: section) { _, new in selected = new }
     }
 }

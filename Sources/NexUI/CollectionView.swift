@@ -25,13 +25,12 @@ struct CollectionView: View {
             }
             .padding(32)
         }
-        .contentMargins(.top, GlassHeaderMetrics.inset, for: .scrollContent)
-        .glassHeader(title: node.name, leading: {
-            Button { model.page = .home } label: {
-                Label("Projects", systemImage: "chevron.left").font(.callout.weight(.medium)).foregroundStyle(theme.accent)
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                Button { model.page = .home } label: { Label("Projects", systemImage: "chevron.left") }
+                    .help("Back to projects")
             }
-            .buttonStyle(.plain)
-            Divider().frame(height: 18)
-        })
+        }
+        .navigationTitle(node.name)
     }
 }
