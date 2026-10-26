@@ -106,6 +106,14 @@ extension GitService {
     }
 }
 
+/// Keeps the last few output lines (for error messages) safely across threads.
+final class LineTail: @unchecked Sendable {
+    private let lock = NSLock()
+    private var lines: [String] = []
+    func add(_ line: String) { lock.lock(); lines.append(line); if lines.count > 8 { lines.removeFirst() }; lock.unlock() }
+    var text: String { lock.lock(); defer { lock.unlock() }; return lines.suffix(6).joined(separator: "\n") }
+}
+
 extension GitService {
     public func initRepository(at dir: URL, branch: String) async throws {
         try await run(["init", "--initial-branch=\(branch)"], dir)
@@ -113,16 +121,18 @@ extension GitService {
 
     /// `git clone --progress -- <url> <name>` inside `parent`, streaming output lines.
     public func clone(url: String, into parent: URL, name: String, onLine: @escaping @Sendable (String) -> Void) async throws {
-        var collected: [String] = []
-        let lock = NSLock()
+        let tail = LineTail()
         let code = try await runner.stream(["clone", "--progress", "--", url, name], in: parent) { line in
-            lock.lock(); collected.append(line); lock.unlock()
+            tail.add(line)
             onLine(line)
         }
         if Task.isCancelled { throw CancellationError() }
-        guard code == 0 else {
-            lock.lock(); let text = collected.suffix(6).joined(separator: "\n"); lock.unlock()
-            throw Self.classify(text, code: code)
-        }
+        guard code == 0 else { throw Self.classify(tail.text, code: code) }
+    }
+}
+
+extension GitService {
+    public func setGlobalConfig(_ key: String, value: String) async throws {
+        try await run(["config", "--global", key, value], AppSettingsHome.url)
     }
 }

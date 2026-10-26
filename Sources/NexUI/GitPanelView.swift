@@ -4,7 +4,8 @@ import NexGit
 
 struct GitPanelView: View {
     let model: AppModel
-    let project: Project
+    let root: URL
+    let title: String
     @State private var repos: [URL] = []
     @State private var selectedRepo: URL?
 
@@ -12,7 +13,7 @@ struct GitPanelView: View {
         VStack(alignment: .leading, spacing: 12) {
             if repos.isEmpty {
                 ContentUnavailableView("No git repository", systemImage: "arrow.triangle.branch",
-                                       description: Text("\(project.name) isn't a git repository yet."))
+                                       description: Text("\(title) isn't a git repository yet."))
             } else {
                 if repos.count > 1 {
                     Picker("Repository", selection: Binding(get: { selectedRepo ?? repos[0] }, set: { selectedRepo = $0 })) {
@@ -24,11 +25,11 @@ struct GitPanelView: View {
                     .id(selectedRepo ?? repos[0])
             }
         }
-        .task { repos = model.git.findRepos(under: project.root) }
+        .task { repos = model.git.findRepos(under: root) }
     }
 
     private func relativeName(_ url: URL) -> String {
-        url == project.root ? project.name : url.path.replacingOccurrences(of: project.root.path + "/", with: "")
+        url == root ? title : url.path.replacingOccurrences(of: root.path + "/", with: "")
     }
 }
 
@@ -112,7 +113,7 @@ private struct RepoView: View {
             Spacer()
             if git.isBusy { ProgressView().controlSize(.small) }
             Button { Task { await git.fetch() } } label: { Label("Fetch", systemImage: "arrow.clockwise") }.buttonStyle(.glass)
-            Button { Task { await git.pull(strategy: .ffOnly) } } label: { Label("Pull", systemImage: "arrow.down.circle") }.buttonStyle(.glass)
+            Button { Task { await git.pull(strategy: model.settings.settings.defaultPullStrategy.strategy) } } label: { Label("Pull", systemImage: "arrow.down.circle") }.buttonStyle(.glass)
             Button { Task { await git.push() } } label: { Label("Push", systemImage: "arrow.up.circle") }.buttonStyle(.glassProminent)
             Button { showIdentity = true } label: { Image(systemName: "person.crop.circle") }.buttonStyle(.glass).help("Git name and email")
         }

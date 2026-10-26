@@ -40,7 +40,7 @@ public struct ProjectCreator: Sendable {
     }
 
     /// Accepts https/http/ssh/git/file URLs, scp-style `user@host:path`, and absolute local paths.
-    static func isAcceptableURL(_ url: String) -> Bool {
+    public static func isAcceptableURL(_ url: String) -> Bool {
         let u = url.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !u.isEmpty, !u.hasPrefix("-"), !u.contains("::"), !u.contains("\0"), !u.contains("\n") else { return false }
         if u.hasPrefix("/") { return true }

@@ -3,37 +3,29 @@ import AppKit
 import NexCore
 import NexProcess
 
-struct RunControls: View {
+/// The main App Store-style button on a card: Run (with a menu of choices) or Stop.
+struct RunPill: View {
     @Bindable var model: AppModel
     let project: Project
     @State private var showDevices = false
 
     var body: some View {
-        HStack(spacing: 8) {
-            ForEach(model.availableActions(for: project), id: \.self) { action in
-                Button(action.rawValue) { start(action) }
-                    .buttonStyle(.glass)
-                    .disabled(isActive(action))
-                    .popover(isPresented: action == .flutter ? $showDevices : .constant(false)) {
-                        FlutterDevicePicker(model: model, project: project, dismiss: { showDevices = false })
-                    }
-            }
-            Spacer(minLength: 0)
-            if model.isRunning(project) {
-                Button(role: .destructive) { Task { await model.stop(project) } } label: {
-                    Label("Stop", systemImage: "stop.fill")
+        let actions = model.availableActions(for: project)
+        if model.isRunning(project) {
+            Pill("Stop", style: .destructive, systemImage: "stop.fill") { Task { await model.stop(project) } }
+        } else if let primary = CardPrimaryAction.defaultAction(for: actions) {
+            Menu {
+                ForEach(actions, id: \.self) { action in
+                    Button(action.rawValue) { start(action) }
                 }
-                .buttonStyle(.glassProminent)
-                .tint(.red)
+            } label: {
+                PillLabel(CardPrimaryAction.title(running: false, actions: actions), systemImage: "play.fill")
+            } primaryAction: {
+                start(primary)
             }
-        }
-        .controlSize(.regular)
-    }
-
-    private func isActive(_ action: RunAction) -> Bool {
-        action.kinds.allSatisfy { kind in
-            project.targets.filter { $0.kind == kind }.allSatisfy {
-                model.processes.states[ProcessManager.id(for: $0, projectID: project.id)]?.isActive == true
+            .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
+            .popover(isPresented: $showDevices) {
+                FlutterDevicePicker(model: model, project: project, dismiss: { showDevices = false })
             }
         }
     }
@@ -46,6 +38,7 @@ struct RunControls: View {
 
 struct ServiceStatusList: View {
     @Bindable var model: AppModel
+    @Environment(\.theme) private var theme
     let project: Project
 
     private var rows: [(ServiceID, ServiceState)] {
@@ -60,12 +53,12 @@ struct ServiceStatusList: View {
                 ForEach(rows, id: \.0) { id, state in
                     HStack(spacing: 8) {
                         Circle().fill(color(state)).frame(width: 8, height: 8)
-                        Text(title(for: id)).font(.callout.weight(.medium))
-                        Text(label(state)).font(.callout).foregroundStyle(.secondary).lineLimit(1)
+                        Text(title(for: id)).font(.callout.weight(.medium)).foregroundStyle(theme.fg)
+                        Text(label(state)).font(.callout).foregroundStyle(theme.fg2).lineLimit(1)
                         Spacer()
                         if case .running(let port?) = state {
                             Button("Open") { NSWorkspace.shared.open(URL(string: "http://localhost:\(port)")!) }
-                                .buttonStyle(.glass).controlSize(.small)
+                                .buttonStyle(.plain).font(.callout.weight(.semibold)).foregroundStyle(theme.accent)
                         }
                     }
                 }

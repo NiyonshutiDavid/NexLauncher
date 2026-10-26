@@ -63,32 +63,28 @@ public struct IconTile: View {
 
 public enum PillStyle { case prominent, quiet, destructive }
 
-/// App Store-style capsule button ("GET" / "OPEN").
-public struct Pill: View {
+/// The look of an App Store-style capsule button ("GET" / "OPEN"), usable as a Button or Menu label.
+public struct PillLabel: View {
     @Environment(\.theme) private var theme
     let title: String
     var style: PillStyle = .prominent
     var systemImage: String? = nil
-    let action: () -> Void
 
-    public init(_ title: String, style: PillStyle = .prominent, systemImage: String? = nil, action: @escaping () -> Void) {
+    public init(_ title: String, style: PillStyle = .prominent, systemImage: String? = nil) {
         self.title = title
         self.style = style
         self.systemImage = systemImage
-        self.action = action
     }
 
     public var body: some View {
-        Button(action: action) {
-            HStack(spacing: 5) {
-                if let systemImage { Image(systemName: systemImage).font(.caption.weight(.bold)) }
-                Text(title.uppercased()).font(.system(size: 12, weight: .bold)).tracking(0.4)
-            }
-            .padding(.horizontal, 16).padding(.vertical, 6)
-            .foregroundStyle(foreground)
-            .background(background, in: Capsule())
+        HStack(spacing: 5) {
+            if let systemImage { Image(systemName: systemImage).font(.caption.weight(.bold)) }
+            Text(title.uppercased()).font(.system(size: 12, weight: .bold)).tracking(0.4)
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 16).padding(.vertical, 6)
+        .foregroundStyle(foreground)
+        .background(background, in: Capsule())
+        .contentShape(Capsule())
     }
 
     private var foreground: Color {
@@ -104,6 +100,70 @@ public struct Pill: View {
         case .quiet: return theme.accentSoft
         case .destructive: return Color(red: 0.78, green: 0.2, blue: 0.18)
         }
+    }
+}
+
+public struct Pill: View {
+    let title: String
+    var style: PillStyle = .prominent
+    var systemImage: String? = nil
+    let action: () -> Void
+
+    public init(_ title: String, style: PillStyle = .prominent, systemImage: String? = nil, action: @escaping () -> Void) {
+        self.title = title
+        self.style = style
+        self.systemImage = systemImage
+        self.action = action
+    }
+
+    public var body: some View {
+        Button(action: action) { PillLabel(title, style: style, systemImage: systemImage) }.buttonStyle(.plain)
+    }
+}
+
+/// Small coloured capsule used for tags ("Full-stack", "git · clean", "2 apps inside").
+public struct Badge: View {
+    let text: String
+    var tint: Color = .secondary
+
+    public init(text: String, tint: Color = .secondary) {
+        self.text = text
+        self.tint = tint
+    }
+
+    public var body: some View {
+        Text(text)
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 9).padding(.vertical, 3)
+            .background(tint.opacity(0.16), in: Capsule())
+            .foregroundStyle(tint)
+    }
+}
+
+/// Round icon-only button (terminal, reveal, close).
+public struct IconButton: View {
+    @Environment(\.theme) private var theme
+    let systemImage: String
+    let help: String
+    let action: () -> Void
+
+    public init(_ systemImage: String, help: String, action: @escaping () -> Void) {
+        self.systemImage = systemImage
+        self.help = help
+        self.action = action
+    }
+
+    public var body: some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(theme.fg2)
+                .frame(width: 28, height: 28)
+                .background(theme.canvas, in: Circle())
+                .overlay(Circle().strokeBorder(theme.line, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .help(help)
     }
 }
 

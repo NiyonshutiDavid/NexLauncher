@@ -217,3 +217,35 @@ extension AppModel {
     public func setTheme(_ theme: ThemeID) { settings.settings.theme = theme; settings.save() }
     public func setAppearance(_ mode: AppearanceMode) { settings.settings.appearance = mode; settings.save() }
 }
+
+// MARK: - Git settings
+
+public struct GitSettingsSnapshot: Equatable, Sendable {
+    public var name: String?
+    public var email: String?
+    public var defaultBranch: String?
+    public var credentialHelper: String?
+}
+
+extension AppModel {
+    public func loadGitSettings() async -> GitSettingsSnapshot {
+        let identity = try? await git.identity(AppSettings.realHome, scope: .global)
+        return GitSettingsSnapshot(
+            name: identity?.name, email: identity?.email,
+            defaultBranch: await git.globalConfigValue("init.defaultBranch"),
+            credentialHelper: await git.effectiveConfigValue("credential.helper"))
+    }
+
+    public func saveGitIdentity(name: String, email: String) async throws {
+        try await git.setIdentity(GitIdentity(name: name, email: email), repo: AppSettings.realHome, scope: .global)
+        await refreshGitIdentity()
+    }
+
+    public func saveDefaultBranch(_ branch: String) async throws {
+        let value = branch.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty, !value.hasPrefix("-"), !value.contains(" ") else { throw ProjectCreationError.invalidBranch }
+        try await git.setGlobalConfig("init.defaultBranch", value: value)
+        settings.settings.defaultBranch = value
+        settings.save()
+    }
+}

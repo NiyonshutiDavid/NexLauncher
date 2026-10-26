@@ -124,4 +124,27 @@ public struct GitService: Sendable {
         if let name = id.name { _ = try await git(["config", scopeFlag(scope), "user.name", name], repo) }
         if let email = id.email { _ = try await git(["config", scopeFlag(scope), "user.email", email], repo) }
     }
+
+    // MARK: - Global configuration (name/email live in `identity`; these are for other keys)
+
+    /// A value from the user's global git config (works outside any repository).
+    public func globalConfigValue(_ key: String) async -> String? {
+        let r = try? await runner.runRaw(["config", "--global", "--get", key], in: AppSettingsHome.url)
+        let value = r?.stdout.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return r?.code == 0 && !value.isEmpty ? value : nil
+    }
+
+    /// The effective value of a key as git would see it from the home folder (global + system).
+    public func effectiveConfigValue(_ key: String) async -> String? {
+        let r = try? await runner.runRaw(["config", "--get", key], in: AppSettingsHome.url)
+        let value = r?.stdout.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return r?.code == 0 && !value.isEmpty ? value : nil
+    }
+}
+
+enum AppSettingsHome {
+    static var url: URL {
+        if let pw = getpwuid(getuid()), let dir = pw.pointee.pw_dir { return URL(fileURLWithPath: String(cString: dir)) }
+        return FileManager.default.homeDirectoryForCurrentUser
+    }
 }
