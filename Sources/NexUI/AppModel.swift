@@ -40,6 +40,8 @@ public final class AppModel {
     public var page: AppPage = .home
     public var sheet: AppSheet?
     public var showOnlyUncommitted = false
+    /// A short result line for quick actions (shown in the menu bar popover); clears itself.
+    public var statusMessage: StatusMessage?
     public var detailTab: DetailTab = .overview
     /// Bumps on every completed scan so lazily loaded views (the Folders outline) know to reload.
     public private(set) var refreshToken = 0
