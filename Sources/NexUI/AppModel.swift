@@ -102,7 +102,7 @@ public final class AppModel {
 
 extension AppModel {
     /// Publishes running/pinned state for the widgets. Filled in by the widget task.
-    func publishSnapshot() {}
+    public func publishSnapshot() {}
 }
 
 extension AppModel {

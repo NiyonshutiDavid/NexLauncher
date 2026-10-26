@@ -27,6 +27,10 @@ struct NexLauncherApp: App {
             if !model.menuBarTitle.isEmpty { Text(model.menuBarTitle) }
         }
         .menuBarExtraStyle(.window)
+
+        Settings {
+            SettingsView(model: model)
+        }
     }
 }
 
