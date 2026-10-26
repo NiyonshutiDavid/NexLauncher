@@ -37,7 +37,11 @@ public struct ProjectScanner: Sendable {
 
     private func node(for dir: URL, depth: Int) -> ProjectNode? {
         if Self.detect(in: dir).isEmpty, depth < Self.maxTreeDepth {
-            let slots = subdirectories(of: dir).filter { !collectTargets(in: $0, depth: depth + 1).targets.isEmpty }
+            // A slot counts if it holds manifests or nested repositories that do.
+            let slots = subdirectories(of: dir).filter {
+                let found = collectTargets(in: $0, depth: depth + 1)
+                return !found.targets.isEmpty || !found.nested.isEmpty
+            }
             if slots.count >= 2 {
                 let kinds = Set(slots.flatMap { collectTargets(in: $0, depth: depth + 1).targets.map(\.kind) })
                 if !(kinds.contains(.frontend) && kinds.contains(.backend)) {
@@ -49,7 +53,18 @@ public struct ProjectScanner: Sendable {
             }
         }
         let (targets, nested) = collectTargets(in: dir, depth: depth)
-        guard !targets.isEmpty else { return nil }
+        if targets.isEmpty {
+            // No manifests of its own: the apps live in nested repositories (e.g. frontend/ and backend/ as separate repos).
+            let childNodes = nested.compactMap { node(for: $0.url, depth: $0.depth) }
+            let apps = childNodes.flatMap(\.apps)
+            guard !apps.isEmpty else { return nil }
+            let kinds = Set(apps.flatMap { $0.targets.map(\.kind) })
+            if childNodes.count >= 2 && !(kinds.contains(.frontend) && kinds.contains(.backend)) {
+                return ProjectNode(id: dir.path, name: dir.lastPathComponent, url: dir, kind: .collection, project: nil, children: childNodes)
+            }
+            let project = Project(id: dir.path, name: dir.lastPathComponent, root: dir, targets: apps.flatMap(\.targets))
+            return ProjectNode(id: dir.path, name: dir.lastPathComponent, url: dir, kind: .app, project: project, children: [])
+        }
         let project = Project(id: dir.path, name: dir.lastPathComponent, root: dir, targets: targets)
         let children = nested.compactMap { node(for: $0.url, depth: $0.depth) }
         return ProjectNode(id: dir.path, name: dir.lastPathComponent, url: dir, kind: .app, project: project, children: children)

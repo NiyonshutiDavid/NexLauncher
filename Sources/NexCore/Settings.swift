@@ -46,16 +46,18 @@ public struct AppSettings: Codable, Equatable, Sendable {
         scanRoot = try c.decode(URL.self, forKey: .scanRoot)
         showDockIcon = try c.decode(Bool.self, forKey: .showDockIcon)
         pinnedProjectIDs = try c.decode([String].self, forKey: .pinnedProjectIDs)
-        appearance = try c.decodeIfPresent(AppearanceMode.self, forKey: .appearance) ?? .system
-        theme = try c.decodeIfPresent(ThemeID.self, forKey: .theme) ?? .ember
-        viewMode = try c.decodeIfPresent(ViewMode.self, forKey: .viewMode) ?? .cards
-        dismissedCTAs = try c.decodeIfPresent(Set<String>.self, forKey: .dismissedCTAs) ?? []
-        avatarColorHex = try c.decodeIfPresent(String.self, forKey: .avatarColorHex)
-        avatarPhotoPath = try c.decodeIfPresent(String.self, forKey: .avatarPhotoPath)
-        lastRun = try c.decodeIfPresent(LastRun.self, forKey: .lastRun)
-        defaultBranch = try c.decodeIfPresent(String.self, forKey: .defaultBranch) ?? "main"
-        defaultPullStrategy = try c.decodeIfPresent(PullPreference.self, forKey: .defaultPullStrategy) ?? .ffOnly
-        widgetsConfirmed = try c.decodeIfPresent(Bool.self, forKey: .widgetsConfirmed) ?? false
+        // A single unreadable v2 value must not reset everything else.
+        func value<T: Decodable>(_ key: Keys) -> T? { (try? c.decodeIfPresent(T.self, forKey: key)) ?? nil }
+        appearance = value(.appearance) ?? .system
+        theme = value(.theme) ?? .ember
+        viewMode = value(.viewMode) ?? .cards
+        dismissedCTAs = value(.dismissedCTAs) ?? []
+        avatarColorHex = value(.avatarColorHex)
+        avatarPhotoPath = value(.avatarPhotoPath)
+        lastRun = value(.lastRun)
+        defaultBranch = value(.defaultBranch) ?? "main"
+        defaultPullStrategy = value(.defaultPullStrategy) ?? .ffOnly
+        widgetsConfirmed = value(.widgetsConfirmed) ?? false
     }
 
     enum Keys: String, CodingKey {

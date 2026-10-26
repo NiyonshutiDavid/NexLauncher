@@ -19,15 +19,7 @@ struct NexLauncherApp: App {
         }
         .windowStyle(.hiddenTitleBar)
         .windowToolbarStyle(.unified)
-        .commands {
-            CommandGroup(replacing: .appSettings) {
-                Button("Settings…") {
-                    model.page = .settings(.general)
-                    NSApp.activate()
-                }
-                .keyboardShortcut(",", modifiers: .command)
-            }
-        }
+        .commands { SettingsCommands(model: model) }
 
         MenuBarExtra {
             MenuBarContent(model: model)
@@ -37,6 +29,23 @@ struct NexLauncherApp: App {
             if !model.menuBarTitle.isEmpty { Text(model.menuBarTitle) }
         }
         .menuBarExtraStyle(.window)
+    }
+}
+
+/// ⌘, opens Settings inside the main window, reopening the window if it was closed.
+struct SettingsCommands: Commands {
+    let model: AppModel
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some Commands {
+        CommandGroup(replacing: .appSettings) {
+            Button("Settings…") {
+                model.page = .settings(.general)
+                if !NSApp.windows.contains(where: { $0.isVisible && $0.canBecomeMain }) { openWindow(id: "main") }
+                NSApp.activate()
+            }
+            .keyboardShortcut(",", modifiers: .command)
+        }
     }
 }
 

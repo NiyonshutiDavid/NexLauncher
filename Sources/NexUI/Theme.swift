@@ -33,7 +33,8 @@ private struct ThemeResolver: ViewModifier {
     let id: ThemeID
     @Environment(\.colorScheme) private var scheme
     func body(content: Content) -> some View {
-        content.environment(\.theme, .resolve(id, dark: scheme == .dark))
+        let theme = Theme.resolve(id, dark: scheme == .dark)
+        content.environment(\.theme, theme).tint(theme.accent)       // tint follows the resolved (not requested) appearance
     }
 }
 
@@ -44,7 +45,6 @@ private struct ThemeRoot: ViewModifier {
         content
             .modifier(ThemeResolver(id: id))
             .preferredColorScheme(appearance == .light ? .light : appearance == .dark ? .dark : nil)
-            .tint(Theme.resolve(id, dark: appearance == .dark).accent)
     }
 }
 

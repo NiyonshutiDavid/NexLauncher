@@ -131,3 +131,52 @@ import Foundation
         #expect(tree(t)[0].kind == .collection)
     }
 }
+
+@Suite struct ProjectTreeNestedRepoTests {
+    private let flutter = "name: a\ndependencies:\n  flutter:\n    sdk: flutter\n"
+
+    @Test func separateRepoFrontendAndBackendIsOneFullStackApp() {
+        let t = TempTree()
+        t.mkdir("Proj/frontend/.git"); t.write("Proj/frontend/package.json", TempTree.viteApp)
+        t.mkdir("Proj/backend/.git"); t.write("Proj/backend/manage.py")
+        let nodes = ProjectScanner().scanTree(root: t.root)
+        #expect(nodes.count == 1 && nodes[0].kind == .app)
+        #expect(nodes[0].project?.isFullStack == true)
+        #expect(nodes[0].project?.targets.count == 2)
+    }
+
+    @Test func wrapperWithASingleRepoIsAnApp() {
+        let t = TempTree()
+        t.mkdir("ijwi-new/ijwi/.git"); t.write("ijwi-new/ijwi/package.json", TempTree.viteApp)
+        let nodes = ProjectScanner().scanTree(root: t.root)
+        #expect(nodes.count == 1 && nodes[0].kind == .app && nodes[0].name == "ijwi-new")
+        #expect(nodes[0].project?.targets.map(\.kind) == [.frontend])
+    }
+
+    @Test func wrapperOfSeveralRepoAppsIsACollection() {
+        let t = TempTree()
+        t.mkdir("Sess/w1/app/.git"); t.write("Sess/w1/app/pubspec.yaml", flutter)
+        t.mkdir("Sess/w2/app/.git"); t.write("Sess/w2/app/pubspec.yaml", flutter)
+        let nodes = ProjectScanner().scanTree(root: t.root)
+        #expect(nodes.count == 1 && nodes[0].kind == .collection)
+        #expect(nodes[0].apps.count == 2)
+    }
+
+    @Test func v1AndV2AgreeOnWhichFoldersAreProjects() {
+        let t = TempTree()
+        t.mkdir("A/x/.git"); t.write("A/x/package.json", TempTree.viteApp)
+        t.write("B/package.json", TempTree.viteApp)
+        t.mkdir("C/only/.git"); t.write("C/only/pubspec.yaml", flutter)
+        #expect(ProjectScanner().scan(root: t.root).map(\.name).sorted() == ["A", "B", "C"])
+    }
+}
+
+@Suite struct SettingsToleranceTests {
+    @Test func badEnumValueKeepsEverythingElse() throws {
+        let json = #"{"displayName":"Dave","scanRoot":"file:///tmp/x/","showDockIcon":false,"pinnedProjectIDs":["a"],"theme":"sunset","viewMode":"grid","defaultBranch":"trunk"}"#
+        let s = try JSONDecoder().decode(AppSettings.self, from: Data(json.utf8))
+        #expect(s.displayName == "Dave" && s.pinnedProjectIDs == ["a"] && !s.showDockIcon)
+        #expect(s.theme == .ember && s.viewMode == .cards)
+        #expect(s.defaultBranch == "trunk")
+    }
+}

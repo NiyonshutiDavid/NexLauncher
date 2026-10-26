@@ -122,7 +122,9 @@ extension AppModel {
 
     private func finishAdding(_ folder: URL) async {
         await refresh()
-        let real = String(cString: realpath(folder.path, nil) ?? strdup(folder.path))
+        detailTab = .overview
+        var real = folder.path
+        if let resolved = realpath(folder.path, nil) { real = String(cString: resolved); free(resolved) }
         if let project = projects.first(where: { $0.id == real || $0.id == folder.path }) {
             page = .project(project.id)
         } else {

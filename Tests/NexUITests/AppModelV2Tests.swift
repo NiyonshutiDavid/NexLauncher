@@ -160,4 +160,13 @@ import NexTestSupport
         #expect(RunAction.from(kinds: [.frontend]) == .frontend)
         #expect(RunAction.from(kinds: [.flutter]) == .flutter)
     }
+
+    @Test func addingAProjectResetsTheDetailTab() async throws {
+        let sb = Sandbox()
+        try FileManager.default.createDirectory(at: sb.scanRoot, withIntermediateDirectories: true)
+        let model = sb.makeModel(); model.reloadWidgets = {}
+        model.detailTab = .logs
+        _ = try await model.createProject(name: "Fresh", in: sb.scanRoot, initGit: false)
+        #expect(model.detailTab == .overview)
+    }
 }
