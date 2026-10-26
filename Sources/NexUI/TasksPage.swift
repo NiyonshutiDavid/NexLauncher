@@ -41,7 +41,7 @@ struct TasksPage: View {
             .padding(32)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .navigationTitle("Tasks")
+        .fadingHeader(title: "Tasks") { HeaderBackButton { model.page = .home } }
     }
 }
 

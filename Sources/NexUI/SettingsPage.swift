@@ -59,7 +59,7 @@ struct SettingsPage: View {
                 }
                 Spacer()
             }
-            .frame(width: 210).padding(24)
+            .frame(width: 210).padding(24).padding(.top, HeaderMetrics.contentInset - 24)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
@@ -79,13 +79,7 @@ struct SettingsPage: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .navigationTitle("Settings")
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                Button { model.page = .home } label: { Label("Projects", systemImage: "chevron.left") }
-                    .help("Back to projects")
-            }
-        }
+        .fadingHeader(title: "Settings") { HeaderBackButton { model.page = .home } }
         .onChange(of: section) { _, new in selected = new }
     }
 }

@@ -27,13 +27,11 @@ struct ProjectDetailView: View {
             .padding(32)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                Button { model.page = .home } label: { Label("Projects", systemImage: "chevron.left") }
-                    .help("Back to projects")
-            }
+        .fadingHeader(title: project?.name ?? folder.lastPathComponent) {
+            HeaderBackButton { model.page = .home }
+        } trailing: {
+            if let project { RunPill(model: model, project: project) }
         }
-        .navigationTitle(project?.name ?? folder.lastPathComponent)
     }
 
     private var header: some View {

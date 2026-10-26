@@ -21,7 +21,6 @@ private struct RootContent: View {
         NavigationSplitView {
             SidebarView(model: model)
                 .navigationSplitViewColumnWidth(min: 210, ideal: 240)
-                .toolbar(removing: .sidebarToggle)            // WhatsApp-style: only the window controls up there
         } detail: {
             page
                 .id(pageKey)
@@ -29,9 +28,9 @@ private struct RootContent: View {
                 .background(theme.canvas)
                 .animation(.smooth(duration: 0.3), value: pageKey)
         }
-        // WhatsApp-style header: no bar behind the toolbar; content softly fades out beneath it.
-        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
-        .scrollEdgeEffectStyle(.soft, for: .top)
+        // The header is drawn by each page (FadingHeader), WhatsApp-style, so the system toolbar is hidden:
+        // no bar in a window and no opaque strip in full screen.
+        .toolbar(.hidden, for: .windowToolbar)
         .background(WindowStyler())
         .overlay {
             if model.showOnboarding { OnboardingView(model: model).transition(.opacity) }

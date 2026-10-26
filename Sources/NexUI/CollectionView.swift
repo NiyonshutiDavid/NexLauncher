@@ -22,12 +22,6 @@ struct CollectionView: View {
             }
             .padding(32)
         }
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                Button { model.page = .home } label: { Label("Projects", systemImage: "chevron.left") }
-                    .help("Back to projects")
-            }
-        }
-        .navigationTitle(node.name)
+        .fadingHeader(title: node.name) { HeaderBackButton { model.page = .home } }
     }
 }

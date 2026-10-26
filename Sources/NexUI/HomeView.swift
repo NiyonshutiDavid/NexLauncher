@@ -12,6 +12,10 @@ struct HomeView: View {
         return "\(total) project\(total == 1 ? "" : "s")" + (running > 0 ? " · \(running) running" : "")
     }
 
+    private var headerTitle: String {
+        model.showOnlyUncommitted ? "Unsaved changes" : (model.filter == .all ? "Projects" : model.filter.rawValue)
+    }
+
     /// Each sidebar section gets its own banner, illustration and next step.
     @ViewBuilder private var pageHero: some View {
         if model.showOnlyUncommitted {
@@ -98,22 +102,12 @@ struct HomeView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .animation(.easeInOut(duration: 0.25), value: model.isScanning)
         }
-        .searchable(text: $model.searchText, placement: .toolbar, prompt: "Search projects")
-        .navigationTitle("")
-        .toolbar {
-            ToolbarItem {
-                Picker("View", selection: $model.viewMode) {
-                    Label("Cards", systemImage: "square.grid.2x2").tag(ViewMode.cards)
-                    Label("Folders", systemImage: "list.bullet.indent").tag(ViewMode.folders)
-                }
-                .pickerStyle(.segmented)
-                .help("Switch between cards and the folder structure")
-            }
-            ToolbarItem { AddProjectToolbarButton(model: model) }
-            ToolbarItem {
-                Button { Task { await model.refresh() } } label: { Label("Refresh", systemImage: "arrow.clockwise") }
-                    .help("Scan for projects again")
-            }
+        .fadingHeader(title: headerTitle) {
+            HeaderViewModeToggle(mode: $model.viewMode)
+            HeaderCircleButton(symbol: "arrow.clockwise", help: "Scan for projects again") { Task { await model.refresh() } }
+        } trailing: {
+            HeaderSearchField(text: $model.searchText)
+            AddProjectToolbarButton(model: model)
         }
     }
 
@@ -129,10 +123,7 @@ struct AddProjectToolbarButton: View {
             Button("New folder…", systemImage: "folder.badge.plus") { model.sheet = .addProject(.newFolder) }
             Button("Clone repository…", systemImage: "arrow.down.circle") { model.sheet = .addProject(.clone) }
         } label: {
-            Image(systemName: "plus").font(.system(size: 13, weight: .bold)).foregroundStyle(theme.onAccent)
-                .frame(width: 28, height: 28)
-                .background(theme.accent, in: Circle())
-                .contentShape(Circle())
+            HeaderCircleLabel(symbol: "plus", prominent: true)
         }
         .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
         .help("Add a project")
