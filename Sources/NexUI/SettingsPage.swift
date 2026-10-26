@@ -413,6 +413,12 @@ private struct GeneralSection: View {
                     Pill("Choose…", style: .quiet) { chooseFolder() }
                 }
             }
+            SettingsCard("Menu bar", footer: "macOS hides menu bar icons when the bar is full (common with a notch). The shortcut always works.") {
+                HStack {
+                    Image(systemName: "bolt.horizontal.circle.fill").foregroundStyle(theme.accent)
+                    Text("Open the quick panel from anywhere with ⌥⌘L").foregroundStyle(theme.fg)
+                }
+            }
             SettingsCard("Welcome") {
                 HStack {
                     Text("Replay the first-launch walkthrough.").foregroundStyle(theme.fg2)

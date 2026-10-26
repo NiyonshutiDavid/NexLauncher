@@ -9,6 +9,19 @@ struct NexLauncherApp: App {
     private var model: AppModel { delegate.model }
     @Environment(\.openWindow) private var openWindow
 
+    /// Developer option for screenshots: `open NexLauncher.app --args -NexStartPage ai|tasks|flutter|running|pinned|settings`.
+    private func openStartPage() {
+        switch UserDefaults.standard.string(forKey: "NexStartPage") {
+        case "ai": model.page = .ai
+        case "tasks": model.page = .tasks
+        case "settings": model.page = .settings(.ai)
+        case "flutter": model.select(filter: .flutter)
+        case "running": model.select(filter: .running)
+        case "pinned": model.select(filter: .pinned)
+        default: break
+        }
+    }
+
     var body: some Scene {
         WindowGroup("NexLauncher", id: "main") {
             ContentView(model: model)
@@ -17,6 +30,7 @@ struct NexLauncherApp: App {
                 .task {
                     model.openMainWindowAction = { openWindow(id: "main") }
                     model.applyDockIconPolicy()
+                    openStartPage()
                     await model.refresh()
                 }
         }
