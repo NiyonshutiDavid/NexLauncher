@@ -11,16 +11,22 @@ public struct AppSettings: Codable, Equatable, Sendable {
         fullName.split(separator: " ").first.map(String.init) ?? "there"
     }
 
+    /// The user's real home folder, even inside a sandbox (where `homeDirectoryForCurrentUser` is the container).
+    public static var realHome: URL {
+        if let pw = getpwuid(getuid()), let dir = pw.pointee.pw_dir { return URL(fileURLWithPath: String(cString: dir)) }
+        return FileManager.default.homeDirectoryForCurrentUser
+    }
+
     public static func defaults() -> AppSettings {
         AppSettings(
             displayName: firstName(from: NSFullUserName()),
-            scanRoot: FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents/Nexventures"),
+            scanRoot: realHome.appendingPathComponent("Documents/Nexventures"),
             showDockIcon: true,
             pinnedProjectIDs: [])
     }
 
     public static var supportDirectory: URL {
-        FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/NexLauncher")
+        realHome.appendingPathComponent("Library/Application Support/NexLauncher")
     }
 }
 

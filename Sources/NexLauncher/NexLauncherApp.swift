@@ -11,6 +11,7 @@ struct NexLauncherApp: App {
         WindowGroup("NexLauncher", id: "main") {
             ContentView(model: model)
                 .frame(minWidth: 860, minHeight: 560)
+                .onOpenURL { url in Task { await model.handle(url: url) } }
                 .task {
                     delegate.model = model
                     model.applyDockIconPolicy()

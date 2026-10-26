@@ -48,3 +48,15 @@ import Foundation
         #expect(SharedContainer.read(from: TempTree().root) == WidgetSnapshot(running: [], pinned: []))
     }
 }
+
+@Suite struct SharedLocationTests {
+    @Test func sharedDirectoryIsInRealHomeNotASandboxContainer() {
+        let path = SharedContainer.defaultDirectory.path
+        #expect(path.hasSuffix("Library/Application Support/NexLauncher"))
+        #expect(!path.contains("/Containers/"))
+    }
+
+    @Test func realHomeMatchesPasswdEntry() {
+        #expect(AppSettings.realHome.path == String(cString: getpwuid(getuid()).pointee.pw_dir))
+    }
+}

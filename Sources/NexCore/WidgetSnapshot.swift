@@ -31,13 +31,11 @@ public struct WidgetSnapshot: Codable, Equatable, Sendable {
 }
 
 public enum SharedContainer {
-    public static let groupID = "group.net.nexventures.nexlauncher"
     static let fileName = "widget-snapshot.json"
 
-    /// The shared App Group folder when entitled, else the app's support directory.
-    public static var defaultDirectory: URL {
-        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: groupID) ?? AppSettings.supportDirectory
-    }
+    /// The app writes here and the sandboxed widget reads it through a read-only home-relative exception.
+    /// (An App Group would need a provisioning profile; this keeps the personal build simple.)
+    public static var defaultDirectory: URL { AppSettings.supportDirectory }
 
     public static func write(_ snapshot: WidgetSnapshot, to directory: URL = defaultDirectory) {
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
