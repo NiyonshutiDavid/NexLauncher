@@ -24,6 +24,18 @@ import Foundation
         #expect(env["NVM_DIR"] == home.path + "/.nvm")
     }
 
+    /// Startup files that write to stderr (warnings, banners) must not cost the capture.
+    @Test func survivesAShellThatWritesToStderr() async throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
+        try """
+        sleep 0.3; echo "a warning" >&2
+        export NVM_DIR="$HOME/.nvm"
+        """.write(to: home.appendingPathComponent(".profile"), atomically: true, encoding: .utf8)
+        let env = await ShellEnvironment.capture(shell: "/bin/bash", flatpak: false, environment: ["HOME": home.path])
+        #expect(env["NVM_DIR"] == home.path + "/.nvm")
+    }
+
     @Test func hostCommandsCarryTheCapturedEnvironment() {
         let user = ["PATH": "/h/.nvm/bin:/usr/bin"]
         let dir = URL(fileURLWithPath: "/p")
