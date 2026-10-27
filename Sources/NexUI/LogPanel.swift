@@ -1,5 +1,6 @@
 import SwiftUI
 import NexCore
+import NexApp
 import NexProcess
 
 struct LogPanel: View {

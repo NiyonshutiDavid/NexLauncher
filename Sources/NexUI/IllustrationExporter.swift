@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import NexCore
+import NexApp
 
 /// Renders every illustration to transparent PNGs in light and dark (for the website).
 @MainActor

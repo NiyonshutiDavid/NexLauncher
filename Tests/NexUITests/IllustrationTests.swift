@@ -2,6 +2,8 @@ import Testing
 import SwiftUI
 import NexCore
 @testable import NexUI
+import NexTestSupport
+import NexApp
 
 @MainActor
 @Suite struct IllustrationTests {

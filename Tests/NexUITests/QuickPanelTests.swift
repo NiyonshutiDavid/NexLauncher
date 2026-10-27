@@ -2,6 +2,8 @@ import Testing
 import Foundation
 import NexCore
 @testable import NexUI
+import NexApp
+import NexTestSupport
 
 @Suite struct QuickPanelTests {
     private func p(_ name: String) -> Project {

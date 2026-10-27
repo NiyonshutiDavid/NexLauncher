@@ -1,5 +1,6 @@
 import SwiftUI
 import NexCore
+import NexApp
 
 public enum IconStyle {
     /// A stable hue in 0...1 derived from the name (FNV-1a), so every project keeps its colour.

@@ -2,7 +2,8 @@ import Testing
 import Foundation
 import NexCore
 import NexProcess
-@testable import NexUI
+@testable import NexApp
+import NexTestSupport
 
 private let prefsOn = NotificationPrefs(enabled: true, ready: true, crash: true, added: true, onlyInBackground: true)
 

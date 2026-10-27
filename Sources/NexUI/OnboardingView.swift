@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import NexCore
+import NexApp
 
 struct OnboardingView: View {
     @Bindable var model: AppModel

@@ -3,7 +3,7 @@ import Foundation
 import NexCore
 import NexGit
 import NexTestSupport
-@testable import NexUI
+@testable import NexApp
 
 @MainActor
 @Suite(.serialized) struct AppModelV2Tests {
@@ -141,9 +141,9 @@ import NexTestSupport
         let model = sb.makeModel()
         let dir = sb.scanRoot.appendingPathComponent("Site")
         model.openTerminal(at: dir)
-        #expect(model.terminals.sessions.count == 1)
-        #expect(model.terminals.sessions[0].directory == dir)
-        model.terminals.closeAll()
+        let tabs = (model.terminals as! RecordingTerminalHost).tabs
+        #expect(tabs.count == 1)
+        #expect(tabs.first?.directory == dir)
     }
 
     @Test func addProjectCreatesFolderRefreshesAndOpensIt() async throws {

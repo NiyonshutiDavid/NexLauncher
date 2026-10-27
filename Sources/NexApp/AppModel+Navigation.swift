@@ -1,8 +1,6 @@
 import Foundation
 import NexCore
 import NexGit
-import NexTerminal
-import AppKit
 
 public enum SettingsSection: String, CaseIterable, Identifiable, Sendable {
     case profile = "Profile", git = "Git", ai = "AI", appearance = "Appearance", notifications = "Notifications", general = "General", projects = "Projects"
@@ -36,13 +34,7 @@ public enum AppSheet: Identifiable, Equatable, Sendable {
 extension AppModel {
     /// Brings the main window forward, reopening it if every window was closed.
     public func showMainWindow() {
-        let windows = NSApp?.windows ?? []
-        if let minimised = windows.first(where: { $0.isMiniaturized && $0.canBecomeMain }) {
-            minimised.deminiaturize(nil)             // restore instead of opening a second window
-        } else if !windows.contains(where: { $0.isVisible && $0.canBecomeMain }) {
-            openMainWindowAction?()
-        }
-        NSApp?.activate()
+        if !services.activateMainWindow() { openMainWindowAction?() }
     }
 
     // MARK: - View mode
@@ -55,7 +47,7 @@ extension AppModel {
     // MARK: - Terminal
 
     public func openTerminal(at url: URL) {
-        terminals.open(at: url)
+        terminals.openTab(at: url, command: nil)
     }
 
     // MARK: - CTAs
@@ -253,7 +245,7 @@ extension AppModel {
 
     /// Opens a terminal tab at `url` and shows the Terminal tab of `page`.
     public func showTerminal(at url: URL, page target: AppPage) {
-        terminals.open(at: url)
+        terminals.openTab(at: url, command: nil)
         page = target
         detailTab = .terminal
     }
@@ -300,6 +292,7 @@ public struct Crumb: Equatable, Sendable {
     public let title: String
     /// Where tapping it goes; nil for the current page.
     public let page: AppPage?
+    public init(title: String, page: AppPage?) { self.title = title; self.page = page }
 }
 
 extension AppModel {

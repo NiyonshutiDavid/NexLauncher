@@ -2,7 +2,8 @@ import Testing
 import Foundation
 import NexCore
 import NexGit
-@testable import NexUI
+@testable import NexApp
+import NexTestSupport
 
 @MainActor
 @Suite struct SettingsPageTests {
@@ -12,7 +13,8 @@ import NexGit
         FileManager.default.createFile(atPath: config.path, contents: nil)
         let git = GitService(runner: GitRunner(extraEnvironment: ["GIT_CONFIG_GLOBAL": config.path, "GIT_CONFIG_NOSYSTEM": "1"]))
         let settings = SettingsStore(fileURL: sb.root.appendingPathComponent("settings.json"))
-        let model = AppModel(settings: settings,
+        let model = AppModel(services: RecordingPlatformServices(), terminals: RecordingTerminalHost(),
+                             settings: settings,
                              overrides: OverrideStore(fileURL: sb.root.appendingPathComponent("o.json")),
                              git: git, login: FakeLogin(), snapshotDirectory: sb.root.appendingPathComponent("shared"))
         return (model, sb, config)

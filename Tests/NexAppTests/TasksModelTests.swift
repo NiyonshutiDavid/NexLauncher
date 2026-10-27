@@ -1,7 +1,8 @@
 import Testing
 import Foundation
 import NexCore
-@testable import NexUI
+@testable import NexApp
+import NexTestSupport
 
 @MainActor
 @Suite struct TasksModelTests {

@@ -5,7 +5,7 @@ import NexCore
 public enum OnboardingStep: Int, CaseIterable, Sendable {
     case welcome, name, projects, git, look, ai, extras
 
-    var illustration: IllustrationKind {
+    public var illustration: IllustrationKind {
         switch self {
         case .welcome: return .rocket
         case .name: return .power

@@ -1,5 +1,6 @@
 import SwiftUI
 import NexCore
+import NexApp
 
 /// "Projects › sessions › week1" in a glass capsule; every crumb but the last navigates.
 struct BreadcrumbBar: View {

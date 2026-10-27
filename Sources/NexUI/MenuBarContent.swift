@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import NexCore
+import NexApp
 
 /// What the quick panel lists: running projects first, then pinned ones that aren't already running.
 public struct QuickPanelSections {

@@ -2,7 +2,8 @@ import Testing
 import Foundation
 import NexCore
 import NexProcess
-@testable import NexUI
+@testable import NexApp
+import NexTestSupport
 
 @MainActor
 @Suite(.serialized) struct RunActionsTests {

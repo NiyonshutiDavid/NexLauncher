@@ -2,7 +2,7 @@ import Testing
 import Foundation
 import NexGit
 import NexTestSupport
-@testable import NexUI
+@testable import NexApp
 
 @MainActor
 @Suite struct GitModelTests {

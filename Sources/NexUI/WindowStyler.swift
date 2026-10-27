@@ -1,4 +1,5 @@
 import SwiftUI
+import NexApp
 import AppKit
 
 /// Reaches the hosting NSWindow: transparent title bar with no separator. In full screen the toolbar only shows on

@@ -1,7 +1,8 @@
 import Testing
 import Foundation
 import NexCore
-@testable import NexUI
+@testable import NexApp
+import NexTestSupport
 
 @MainActor
 @Suite struct UIStateTests {
@@ -76,8 +77,8 @@ import NexCore
         let dir = sb.scanRoot.appendingPathComponent("Site")
         model.showTerminal(at: dir, page: .project(dir.path))
         #expect(model.page == .project(dir.path) && model.detailTab == .terminal)
-        #expect(model.terminals.sessions.count == 1)
-        model.terminals.closeAll()
+        let tabs = (model.terminals as! RecordingTerminalHost).tabs
+        #expect(tabs.map(\.directory) == [dir] && tabs.first?.command == nil)
     }
 
     @Test func themeAndAppearanceChangesPersist() {

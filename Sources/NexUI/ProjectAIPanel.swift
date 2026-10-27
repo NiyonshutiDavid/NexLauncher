@@ -1,5 +1,6 @@
 import SwiftUI
 import NexCore
+import NexApp
 
 /// "Ask AI" inside a project: a side panel with a composer and this project's runs, so you never leave the page.
 struct ProjectAIPanel: View {

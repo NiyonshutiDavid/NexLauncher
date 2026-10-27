@@ -1,11 +1,8 @@
 import Foundation
 import Observation
-import WidgetKit
 import NexCore
 import NexProcess
 import NexGit
-import NexTerminal
-import AppKit
 
 public struct GitBadge: Equatable, Sendable {
     public var changes = 0, ahead = 0, behind = 0, repoCount = 0
@@ -66,7 +63,10 @@ public final class AppModel {
     public let overrides: OverrideStore
     public let processes: ProcessManager
     public let git: GitService
-    public let terminals: TerminalTabs
+    public let terminals: TerminalHost
+    /// What the model asks of the system it runs on.
+    public let services: PlatformServices
+    public let hostOS: HostOS
     public let notifier: Notifying
     /// Set by the app so any part of it (menu bar, Dock menu, notifications) can bring the main window back.
     public var openMainWindowAction: (() -> Void)?
@@ -86,15 +86,17 @@ public final class AppModel {
     public var agentDraft: AgentDraft?
     public internal(set) var agentError: String?
     let snapshotDirectory: URL
-    /// Asks WidgetKit to refresh; replaced in tests.
-    public var reloadWidgets: () -> Void = { WidgetCenter.shared.reloadAllTimelines() }
+    /// Asks the system to refresh widgets (through `services`); replaced in tests.
+    public var reloadWidgets: () -> Void = {}
 
-    public init(settings: SettingsStore? = nil,
+    public init(services: PlatformServices,
+                terminals: TerminalHost,
+                hostOS: HostOS = .current,
+                settings: SettingsStore? = nil,
                 overrides: OverrideStore? = nil,
                 processes: ProcessManager? = nil,
                 git: GitService = GitService(),
                 login: LoginItemControlling? = nil,
-                terminals: TerminalTabs? = nil,
                 notifier: Notifying? = nil,
                 appIsActive: (() -> Bool)? = nil,
                 devices: DevicesModel? = nil,
@@ -105,14 +107,17 @@ public final class AppModel {
         self.overrides = overrides ?? OverrideStore(fileURL: AppSettings.supportDirectory.appendingPathComponent("overrides.json"))
         self.processes = processes ?? ProcessManager()
         self.git = git
-        self.login = LaunchAtLogin(controller: login ?? SMLoginItem())
-        self.terminals = terminals ?? TerminalTabs()
-        self.notifier = notifier ?? SystemNotifier()
+        self.services = services
+        self.hostOS = hostOS
+        self.login = LaunchAtLogin(controller: login ?? defaultLoginItem())
+        self.terminals = terminals
+        self.notifier = notifier ?? NoopNotifier()
         self.devices = devices ?? DevicesModel()
         self.taskStore = TaskStore(fileURL: tasksFile ?? TaskStore.defaultURL)
         self.tasks = taskStore.tasks
         self.agents = agents ?? AgentCatalog()
-        self.appIsActive = appIsActive ?? { NSApp.isActive }
+        self.appIsActive = appIsActive ?? { [unowned services] in services.isAppActive }
+        self.reloadWidgets = { [unowned services] in services.reloadWidgets() }
         self.snapshotDirectory = snapshotDirectory ?? SharedContainer.defaultDirectory
         self.processes.onChange = { [weak self] in
             self?.publishSnapshot()
@@ -215,10 +220,9 @@ extension AppModel {
     public var shouldConfirmQuit: Bool { processes.runningCount > 0 }
 }
 
-import AppKit
 extension AppModel {
     /// Shows or hides the Dock icon according to settings (the menu bar item always stays).
     public func applyDockIconPolicy() {
-        NSApp.setActivationPolicy(settings.settings.showDockIcon ? .regular : .accessory)
+        services.setDockIconVisible(settings.settings.showDockIcon)
     }
 }

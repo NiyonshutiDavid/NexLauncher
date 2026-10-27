@@ -6,10 +6,12 @@ var targets: [Target] = [
     .target(name: "NexCore"),
     .target(name: "NexProcess", dependencies: ["NexCore"]),
     .target(name: "NexGit", dependencies: ["NexCore"]),
-    .target(name: "NexTestSupport", dependencies: ["NexGit"], path: "Tests/NexTestSupport"),
+    .target(name: "NexApp", dependencies: ["NexCore", "NexProcess", "NexGit"]),
+    .target(name: "NexTestSupport", dependencies: ["NexGit", "NexApp"], path: "Tests/NexTestSupport"),
     .testTarget(name: "NexCoreTests", dependencies: ["NexCore"]),
     .testTarget(name: "NexProcessTests", dependencies: ["NexProcess", "NexCore"]),
     .testTarget(name: "NexGitTests", dependencies: ["NexGit", "NexTestSupport"]),
+    .testTarget(name: "NexAppTests", dependencies: ["NexApp", "NexCore", "NexProcess", "NexGit", "NexTestSupport"]),
 ]
 var products: [Product] = []
 var dependencies: [Package.Dependency] = []
@@ -20,10 +22,10 @@ dependencies += [.package(url: "https://github.com/migueldeicaza/SwiftTerm.git",
 products += [.executable(name: "NexLauncher", targets: ["NexLauncher"])]
 targets += [
     .target(name: "NexTerminal", dependencies: [.product(name: "SwiftTerm", package: "SwiftTerm")]),
-    .target(name: "NexUI", dependencies: ["NexCore", "NexProcess", "NexGit", "NexTerminal"]),
+    .target(name: "NexUI", dependencies: ["NexCore", "NexProcess", "NexGit", "NexTerminal", "NexApp"]),
     .executableTarget(name: "NexLauncher", dependencies: ["NexUI"]),
     .testTarget(name: "NexTerminalTests", dependencies: ["NexTerminal"]),
-    .testTarget(name: "NexUITests", dependencies: ["NexUI", "NexCore", "NexProcess", "NexGit", "NexTestSupport"]),
+    .testTarget(name: "NexUITests", dependencies: ["NexUI", "NexApp", "NexCore", "NexProcess", "NexGit", "NexTerminal", "NexTestSupport"]),
 ]
 #endif
 

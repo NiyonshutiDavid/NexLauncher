@@ -1,5 +1,6 @@
 import SwiftUI
 import NexCore
+import NexApp
 
 public struct ContentView: View {
     @Bindable var model: AppModel

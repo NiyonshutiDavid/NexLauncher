@@ -1,7 +1,8 @@
 import Testing
 import Foundation
 import NexCore
-@testable import NexUI
+@testable import NexApp
+import NexTestSupport
 
 @Suite struct CTATests {
     private func ctx(identity: Bool = false, changes: Int = 0, lastRun: String? = nil, running: Bool = false,

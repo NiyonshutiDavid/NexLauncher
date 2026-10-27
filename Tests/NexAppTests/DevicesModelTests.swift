@@ -1,7 +1,8 @@
 import Testing
 import Foundation
 import NexCore
-@testable import NexUI
+@testable import NexApp
+import NexTestSupport
 
 final class FakeDeviceShell: DeviceShell, @unchecked Sendable {
     var outputs: [String: String] = [:]

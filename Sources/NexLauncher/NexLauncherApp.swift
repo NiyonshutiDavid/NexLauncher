@@ -1,4 +1,5 @@
 import SwiftUI
+import NexApp
 import AppKit
 import NexUI
 import UserNotifications
@@ -146,7 +147,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         let services = model.processes.runningCount
-        let terminalBusy = model.terminals.anyForegroundProgram
+        let terminalBusy = model.terminals.hasRunningPrograms
         let agents = model.runningAgentCount
         guard services > 0 || terminalBusy || agents > 0 else {
             model.terminals.closeAll()

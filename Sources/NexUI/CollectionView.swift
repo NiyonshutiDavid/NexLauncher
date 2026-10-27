@@ -1,5 +1,6 @@
 import SwiftUI
 import NexCore
+import NexApp
 
 struct CollectionView: View {
     @Bindable var model: AppModel

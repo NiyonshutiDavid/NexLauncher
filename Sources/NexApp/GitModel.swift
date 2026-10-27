@@ -1,4 +1,5 @@
 import Foundation
+import NexCore
 import Observation
 import NexGit
 

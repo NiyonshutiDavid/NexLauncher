@@ -30,6 +30,7 @@ public struct StatusMessage: Equatable, Identifiable, Sendable {
     public let id = UUID()
     public let text: String
     public let isError: Bool
+    public init(text: String, isError: Bool) { self.text = text; self.isError = isError }
 }
 
 public enum MenuBarFilter {

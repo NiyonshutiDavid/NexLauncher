@@ -1,5 +1,4 @@
 import Foundation
-import AppKit
 import NexCore
 import NexProcess
 
@@ -80,10 +79,8 @@ extension AppModel {
 
     /// Antigravity has no command-line runner: open the project in the app with the task on the clipboard.
     private func openInAntigravity(project: Project, task: String) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(task, forType: .string)
-        let config = NSWorkspace.OpenConfiguration()
-        NSWorkspace.shared.open([project.root], withApplicationAt: URL(fileURLWithPath: "/Applications/Antigravity.app"), configuration: config)
+        services.copy(task)
+        services.open([project.root], withApplicationAt: URL(fileURLWithPath: "/Applications/Antigravity.app"))
         agentError = nil
         statusMessage = StatusMessage(text: "Opened \(project.name) in Antigravity. The task is on your clipboard — paste it into the Agent Manager.", isError: false)
     }
@@ -91,8 +88,7 @@ extension AppModel {
     /// Runs the agent interactively in a terminal tab instead (you see and answer everything).
     public func startAgentInTerminal(_ kind: AgentKind, task: String, project: Project) {
         guard let command = AgentCommandBuilder.interactiveCommand(kind: kind, task: task) else { return }
-        let session = terminals.open(at: project.root)
-        session.send(command + "\n")
+        terminals.openTab(at: project.root, command: command)
         page = .project(project.id)
         detailTab = .terminal
     }
@@ -101,8 +97,7 @@ extension AppModel {
     public func signIn(_ kind: AgentKind) {
         guard let command = kind.signInCommand else { return }
         let root = settings.settings.scanRoot
-        let session = terminals.open(at: root)
-        session.send(command + "\n")
+        terminals.openTab(at: root, command: command)
         page = .folder(root.path)
         detailTab = .terminal
     }

@@ -2,7 +2,7 @@ import Testing
 import Foundation
 import NexCore
 import NexTestSupport
-@testable import NexUI
+@testable import NexApp
 
 @MainActor
 @Suite struct ProjectFilterSetTests {

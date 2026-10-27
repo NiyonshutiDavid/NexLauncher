@@ -1,4 +1,5 @@
 import SwiftUI
+import NexApp
 import NexTerminal
 
 /// Terminal tabs. New tabs open in `directory`; tabs opened elsewhere stay available here too.
@@ -6,9 +7,11 @@ struct TerminalPanel: View {
     @Bindable var model: AppModel
     @Environment(\.theme) private var theme
     let directory: URL
+    /// Only used if the model was built without SwiftTerm tabs (never in the app).
+    private static let noTabs = TerminalTabs()
 
     var body: some View {
-        let tabs = model.terminals
+        let tabs = model.terminalTabs ?? Self.noTabs
         VStack(spacing: 10) {
             HStack(spacing: 8) {
                 ScrollView(.horizontal, showsIndicators: false) {

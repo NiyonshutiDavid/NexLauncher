@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import NexCore
+import NexApp
 
 extension AgentKind {
     var symbol: String {

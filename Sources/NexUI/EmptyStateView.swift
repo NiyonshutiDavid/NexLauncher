@@ -1,4 +1,5 @@
 import SwiftUI
+import NexApp
 
 struct EmptyStateView: View {
     @Bindable var model: AppModel

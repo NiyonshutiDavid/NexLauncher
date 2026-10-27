@@ -39,7 +39,7 @@ CORE=(${(f)"$(ls Sources/NexCore/*.swift | grep -v LoginItem.swift)"})
 # (the widget compiles NexCore's sources into its own module).
 SHARED="$(mktemp -d)"
 for f in Sources/NexUI/Illustrations.swift Sources/NexUI/Theme.swift; do
-    sed '/^import NexCore$/d' "$f" > "$SHARED/$(basename $f)"
+    sed -e '/^import NexCore$/d' -e '/^import NexApp$/d' "$f" > "$SHARED/$(basename $f)"
 done
 SLICES=()
 for a in $ARCHS; do
