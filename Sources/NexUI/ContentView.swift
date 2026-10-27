@@ -21,10 +21,12 @@ private struct RootContent: View {
     var body: some View {
         NavigationSplitView {
             SidebarView(model: model)
+                .safeAreaPadding(.top, isFullScreen ? HeaderMetrics.windowToolbarBand : 0)
                 .navigationSplitViewColumnWidth(min: 210, ideal: 240)
                 .toolbar(removing: .sidebarToggle)
         } detail: {
             page
+                .safeAreaPadding(.top, isFullScreen ? HeaderMetrics.windowToolbarBand : 0)
                 .id(pageKey)
                 .transition(.opacity.combined(with: .offset(x: 18)))
                 .background(theme.canvas)

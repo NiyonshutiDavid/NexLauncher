@@ -8,6 +8,9 @@ enum HeaderMetrics {
     static let height: CGFloat = 54
     /// Scroll content starts below the header but scrolls up under the fade.
     static let contentInset: CGFloat = 8
+    /// The window toolbar's band at the top of a normal window. Full screen has none, so it is added back there
+    /// to keep the sidebar and pages at the same heights in both modes.
+    static let windowToolbarBand: CGFloat = 52
 }
 
 extension View {
