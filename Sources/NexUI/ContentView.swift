@@ -16,6 +16,7 @@ public struct ContentView: View {
 private struct RootContent: View {
     @Bindable var model: AppModel
     @Environment(\.theme) private var theme
+    @State private var isFullScreen = false
 
     var body: some View {
         NavigationSplitView {
@@ -31,10 +32,12 @@ private struct RootContent: View {
                 // An invisible item: with an empty toolbar macOS drops the sidebar panel below the window controls.
                 .toolbar { ToolbarSpacer(.flexible) }
         }
-        // The header is drawn by each page (FadingHeader), WhatsApp-style: its controls go in the transparent
-        // system toolbar, which also keeps the window controls inside the sidebar.
+        // The header is drawn by each page (FadingHeader), WhatsApp-style: in a window its controls go in the
+        // transparent system toolbar (which also keeps the window controls inside the sidebar); in full screen
+        // the toolbar is hidden and the page draws them.
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
-        .background(WindowStyler())
+        .environment(\.windowIsFullScreen, isFullScreen)
+        .background(WindowStyler(isFullScreen: $isFullScreen))
         .overlay {
             if model.showOnboarding { OnboardingView(model: model).transition(.opacity) }
         }

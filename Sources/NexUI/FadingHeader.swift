@@ -44,6 +44,7 @@ private struct HeaderTitle: View {
 
 private struct FadingHeaderModifier<Center: View, Leading: View, Trailing: View>: ViewModifier {
     @Environment(\.theme) private var theme
+    @Environment(\.windowIsFullScreen) private var fullScreen
     let center: Center
     let leading: Leading
     let trailing: Trailing
@@ -52,26 +53,49 @@ private struct FadingHeaderModifier<Center: View, Leading: View, Trailing: View>
         content
             .contentMargins(.top, HeaderMetrics.contentInset, for: .scrollContent)
             .overlay(alignment: .top) {
-                // The fade: opaque canvas at the very top, gone by the bottom of the header.
-                LinearGradient(stops: [.init(color: theme.canvas, location: 0),
-                                       .init(color: theme.canvas.opacity(0.85), location: 0.45),
-                                       .init(color: theme.canvas.opacity(0), location: 1)],
-                               startPoint: .top, endPoint: .bottom)
-                    .frame(height: HeaderMetrics.height + 34)
-                    .allowsHitTesting(false)
-                    .ignoresSafeArea(.container, edges: .top)     // start at the window's top edge, no strip above
+                ZStack(alignment: .top) {
+                    // The fade: opaque canvas at the very top, gone by the bottom of the header.
+                    LinearGradient(stops: [.init(color: theme.canvas, location: 0),
+                                           .init(color: theme.canvas.opacity(0.85), location: 0.45),
+                                           .init(color: theme.canvas.opacity(0), location: 1)],
+                                   startPoint: .top, endPoint: .bottom)
+                        .frame(height: HeaderMetrics.height + 34)
+                        .allowsHitTesting(false)
+                    if fullScreen {
+                        // Full screen: the toolbar is hidden (macOS gives it an opaque bar there), so the
+                        // controls are drawn here, where nothing covers them.
+                        ZStack {
+                            center
+                            HStack(spacing: 10) {
+                                leading
+                                Spacer(minLength: 12)
+                                trailing
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .frame(height: HeaderMetrics.height)
+                    }
+                }
+                .ignoresSafeArea(.container, edges: .top)     // start at the window's top edge, no strip above
             }
-            // The controls live in the window's (transparent) toolbar: it sits over this strip and would
+            // In a window the controls live in the (transparent) toolbar: it sits over this strip and would
             // otherwise take every click meant for buttons drawn underneath it.
             .toolbar {
-                ToolbarItemGroup(placement: .navigation) { leading }
-                    .sharedBackgroundVisibility(.hidden)
-                ToolbarItem(placement: .principal) { center }
-                    .sharedBackgroundVisibility(.hidden)
-                ToolbarItemGroup(placement: .primaryAction) { trailing }
-                    .sharedBackgroundVisibility(.hidden)
+                if !fullScreen {
+                    ToolbarItemGroup(placement: .navigation) { leading }
+                        .sharedBackgroundVisibility(.hidden)
+                    ToolbarItem(placement: .principal) { center }
+                        .sharedBackgroundVisibility(.hidden)
+                    ToolbarItemGroup(placement: .primaryAction) { trailing }
+                        .sharedBackgroundVisibility(.hidden)
+                }
             }
     }
+}
+
+extension EnvironmentValues {
+    /// Whether the main window is in full screen (set by WindowStyler).
+    @Entry var windowIsFullScreen = false
 }
 
 /// A round glass button for the header (like WhatsApp's "…").
