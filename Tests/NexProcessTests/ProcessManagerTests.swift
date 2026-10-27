@@ -17,7 +17,17 @@ private func target(_ command: String, kind: ServiceKind = .frontend, dir: URL =
     ServiceTarget(kind: kind, directory: dir, framework: nil, command: command)
 }
 
-private func isAlive(_ pid: Int32) -> Bool { kill(pid, 0) == 0 }
+/// Running and not a zombie. In a container whose first process doesn't reap orphans, a killed grandchild stays
+/// a zombie forever, and `kill(pid, 0)` still succeeds for it.
+private func isAlive(_ pid: Int32) -> Bool {
+    guard kill(pid, 0) == 0 else { return false }
+    #if os(Linux)
+    if let stat = try? String(contentsOfFile: "/proc/\(pid)/stat", encoding: .utf8),
+       let close = stat.lastIndex(of: ")"),
+       stat[stat.index(after: close)...].trimmingCharacters(in: .whitespaces).hasPrefix("Z") { return false }
+    #endif
+    return true
+}
 
 @Suite struct PortParserTests {
     @Test func parsesVitePortWithAnsi() {

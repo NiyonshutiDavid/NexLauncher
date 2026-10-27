@@ -21,7 +21,7 @@ private let simctlFixture = """
 @MainActor
 @Suite struct DevicesModelTests {
     private func model(_ shell: FakeDeviceShell) -> DevicesModel {
-        DevicesModel(shell: shell, androidSDK: URL(fileURLWithPath: "/sdk"))
+        DevicesModel(shell: shell, androidSDK: URL(fileURLWithPath: "/sdk"), hostOS: .macOS, shellPath: "/bin/zsh")
     }
 
     @Test func refreshLoadsSimulatorsEmulatorsAndConnectedDevices() async {
@@ -59,7 +59,7 @@ private let simctlFixture = """
 
     @Test func withoutAnAndroidSDKThereAreNoEmulatorsAndAHint() async {
         let shell = FakeDeviceShell()
-        let m = DevicesModel(shell: shell, androidSDK: nil)
+        let m = DevicesModel(shell: shell, androidSDK: nil, hostOS: .macOS, shellPath: "/bin/zsh")
         await m.refresh()
         #expect(m.avds.isEmpty)
         #expect(m.androidHint != nil)

@@ -62,7 +62,9 @@ public struct GitRunner: Sendable {
             // Event-driven (no blocked threads) so many concurrent git calls can't starve GCD.
             let state = RunState(cont)
             // A pipe is drained when its handler sees an empty read (EOF); we finish once both pipes
-            // are drained AND the process has exited, so no output can be lost to a race.
+            // are drained AND the process has exited, so no output can be lost to a race. A child git leaves
+            // behind can hold the pipes open (and Linux sometimes never reports EOF), so a second after git
+            // exits the call finishes with what was read.
             out.fileHandleForReading.readabilityHandler = { h in
                 let d = h.availableData
                 if d.isEmpty { h.readabilityHandler = nil; state.outDrained() } else { state.appendOut(d) }
@@ -181,11 +183,17 @@ private final class RunState: @unchecked Sendable {
     func appendErr(_ d: Data) { lock.lock(); err.append(d); lock.unlock() }
     func outDrained() { lock.lock(); outDone = true; lock.unlock(); tryFinish() }
     func errDrained() { lock.lock(); errDone = true; lock.unlock(); tryFinish() }
-    func exited(code: Int32) { lock.lock(); self.code = code; lock.unlock(); tryFinish() }
+    func exited(code: Int32) {
+        lock.lock(); self.code = code; lock.unlock()
+        tryFinish()
+        DispatchQueue.global().asyncAfter(deadline: .now() + 1) { [self] in finish(requireDrained: false) }
+    }
 
-    private func tryFinish() {
+    private func tryFinish() { finish(requireDrained: true) }
+
+    private func finish(requireDrained: Bool) {
         lock.lock(); defer { lock.unlock() }
-        guard outDone, errDone, let code, let c = cont else { return }
+        guard (outDone && errDone) || !requireDrained, let code, let c = cont else { return }
         cont = nil
         c.resume(returning: GitResult(
             code: code,

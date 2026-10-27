@@ -44,6 +44,17 @@ import NexTestSupport
         #expect(code == 0)
         #expect(box.value == 20)
     }
+
+    /// A child left behind by git (here a backgrounded `sleep`) keeps the output pipe open, so end-of-output
+    /// never arrives; the call must still return soon after git itself exits, with what git printed.
+    @Test func runReturnsWhenGitExitsWhileAChildHoldsThePipe() async throws {
+        let repo = TempRepo()
+        let runner = GitRunner(extraEnvironment: repo.env)
+        let start = Date()
+        let out = try await runner.run(["-c", "alias.hold=!echo hi; sleep 20 &", "hold"], in: repo.dir, timeout: 15)
+        #expect(out.trimmingCharacters(in: .whitespacesAndNewlines) == "hi")
+        #expect(Date().timeIntervalSince(start) < 5)
+    }
 }
 
 private final class Counter: @unchecked Sendable {

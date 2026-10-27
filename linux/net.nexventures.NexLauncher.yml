@@ -30,6 +30,28 @@ cleanup:
   - "*.la"
   - "*.a"
 modules:
+  # VTE 0.84 needs fmt (headers only) and simdutf, neither in the GNOME SDK.
+  - name: fmt
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DFMT_TEST=OFF
+      - -DFMT_DOC=OFF
+    sources:
+      - type: git
+        url: https://github.com/fmtlib/fmt.git
+        tag: "11.2.0"
+  - name: simdutf
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DBUILD_SHARED_LIBS=ON
+      - -DSIMDUTF_TESTS=OFF
+      - -DSIMDUTF_TOOLS=OFF
+      - -DSIMDUTF_BENCHMARKS=OFF
+    sources:
+      - type: git
+        url: https://github.com/simdutf/simdutf.git
+        tag: v7.7.1
   - name: vte
     buildsystem: meson
     config-opts:
