@@ -50,6 +50,33 @@ struct ProcessManagerLinuxTests {
         #expect(result.output.last == tool.path)
     }
 
+    /// The Flatpak host script (as flatpak-spawn runs it: from a shell that already leads its own session and
+    /// group) must report the group the service itself runs in, so Stop reaches `npm → vite → esbuild`.
+    @Test func hostScriptReportsTheServicesOwnGroup() async throws {
+        let command = "sleep 300 & echo CHILD=$!; wait"
+        let inv = HostCommand.shell(command, in: try tempDir("host"), environment: [:], flatpak: true, shell: "/bin/sh")
+        let start = try #require(inv.arguments.firstIndex(of: "/bin/sh"))
+        let (pid, fd) = try ProcessSpawner.spawn(command: #"exec /bin/sh -c "$NEX_SCRIPT" "$NEX_SHELL""#,
+                                                 directory: try tempDir("leader"),
+                                                 environment: ["NEX_SCRIPT": inv.arguments[start + 2],
+                                                               "NEX_SHELL": inv.arguments[start + 3], "NEX_CMD": command])
+        let box = LinesBox()
+        ProcessSpawner.pump(fd: fd, pid: pid, onLines: { box.add($0) }, onExit: { _ in })
+        var group: pid_t?, child: Int?
+        for _ in 0..<50 where group == nil || child == nil {
+            try await Task.sleep(for: .milliseconds(100))
+            group = ProcessSpawner.hostPGID(for: pid)
+            child = box.lines.compactMap { $0.hasPrefix("CHILD=") ? Int($0.dropFirst(6)) : nil }.first
+        }
+        let pgid = try #require(group), service = try #require(child)
+        kill(-pgid, SIGKILL)
+        try await Task.sleep(for: .milliseconds(500))
+        let stat = try? String(contentsOfFile: "/proc/\(service)/stat", encoding: .utf8)
+        #expect(stat == nil || stat!.contains(") Z "), "the service outlived Stop")
+        kill(Int32(service), SIGKILL)
+        await ProcessSpawner.terminateGroup(pid, grace: 1)
+    }
+
     /// Process ids whose process group (field 5 of /proc/<pid>/stat) is `pgid`.
     private func processesInGroup(_ pgid: pid_t) -> [Int] {
         let entries = (try? FileManager.default.contentsOfDirectory(atPath: "/proc")) ?? []

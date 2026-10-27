@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import NexCore
 @testable import NexGit
 import NexTestSupport
 
@@ -56,6 +57,31 @@ import NexTestSupport
         #expect(Date().timeIntervalSince(start) < 5)
     }
 }
+
+#if os(Linux)
+/// Children started from Swift concurrency threads (libdispatch workers block most signals) must still stop on
+/// SIGTERM, or cancelling a clone and git timeouts leave git running.
+@Suite(.timeLimit(.minutes(1))) struct PipedSpawnSignalTests {
+    @Test func childStopsOnSIGTERM() async throws {
+        let child = try PipedSpawn.start(HostInvocation(executable: "/bin/sleep", arguments: ["30"], environment: [:]),
+                                         in: FileManager.default.temporaryDirectory, mergeStderr: true)
+        let exit = ExitCode()
+        PipedSpawn.onExit(child.pid) { exit.set($0) }
+        kill(child.pid, SIGTERM)
+        for _ in 0..<30 where exit.value == nil { try await Task.sleep(for: .milliseconds(100)) }
+        let code = exit.value
+        if code == nil { kill(child.pid, SIGKILL) }
+        #expect(code == 128 + SIGTERM)
+    }
+}
+
+private final class ExitCode: @unchecked Sendable {
+    private let lock = NSLock()
+    private var code: Int32?
+    func set(_ c: Int32) { lock.lock(); code = c; lock.unlock() }
+    var value: Int32? { lock.lock(); defer { lock.unlock() }; return code }
+}
+#endif
 
 private final class Counter: @unchecked Sendable {
     private let lock = NSLock()
