@@ -28,15 +28,9 @@ struct ProjectDetailView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(minWidth: 0)
+        // Run and Ask AI sit under the title; trailing toolbar items would move over the AI panel when it opens.
         .fadingHeader(crumbs: crumbs, onSelect: { model.page = $0 }) {
             HeaderBackButton { model.goBack() }
-        } trailing: {
-            if let project {
-                HeaderCircleButton(symbol: "sparkles", help: aiPanelOpen ? "Hide the AI assistant" : "Ask AI about this project") {
-                    withAnimation(.spring(duration: 0.35)) { model.toggleAIPanel(for: project) }
-                }
-                RunPill(model: model, project: project)
-            }
         }
         .inspector(isPresented: aiPanelBinding) {
             if let project {

@@ -78,12 +78,29 @@ import NexCore
 
     @Test func agentsAreDetectedThroughTheLoginShell() async {
         let shell = FakeDeviceShell()
-        shell.outputs["/bin/zsh -lc command -v claude >/dev/null && claude --version"] = "2.1.300 (Claude Code)\n"
+        shell.outputs[AgentCatalog.detectCommand("claude").joined(separator: " ")] = "2.1.300 (Claude Code)\n"
         let catalog = AgentCatalog(shell: shell, antigravityApp: URL(fileURLWithPath: "/nonexistent/Antigravity.app"))
         await catalog.refresh()
         #expect(catalog.status(.claude).installed && catalog.status(.claude).version == "2.1.300 (Claude Code)")
         #expect(!catalog.status(.codex).installed)
         #expect(!catalog.status(.antigravity).installed)
+    }
+
+    @Test func antigravityUsesItsCLIWhenInstalledAndTheAppOtherwise() async throws {
+        let app = FileManager.default.temporaryDirectory.appendingPathComponent("Antigravity-\(UUID()).app")
+        try FileManager.default.createDirectory(at: app, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: app) }
+
+        let appOnly = AgentCatalog(shell: FakeDeviceShell(), antigravityApp: app)
+        await appOnly.refresh()
+        #expect(appOnly.status(.antigravity).installed && !appOnly.hasCommandLine(.antigravity))
+
+        let shell = FakeDeviceShell()
+        shell.outputs[AgentCatalog.detectCommand("agy").joined(separator: " ")] = "agy 1.4.0\n"
+        let withCLI = AgentCatalog(shell: shell, antigravityApp: URL(fileURLWithPath: "/nonexistent/Antigravity.app"))
+        await withCLI.refresh()
+        #expect(withCLI.status(.antigravity).installed && withCLI.hasCommandLine(.antigravity))
+        #expect(withCLI.status(.antigravity).version == "agy 1.4.0")
     }
 }
 

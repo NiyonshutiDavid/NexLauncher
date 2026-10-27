@@ -99,16 +99,19 @@ struct ProjectAIPanel: View {
             .pickerStyle(.segmented).labelsHidden().frame(maxWidth: .infinity)
             Label(autonomy.explanation, systemImage: autonomy == .full ? "exclamationmark.triangle.fill" : "info.circle")
                 .font(.caption).foregroundStyle(autonomy == .full ? .orange : theme.fg2)
+            if let notice = agent.notice {
+                Label(notice, systemImage: "exclamationmark.circle").font(.caption).foregroundStyle(.orange)
+            }
             if let error = model.agentError { Text(error).font(.callout).foregroundStyle(.red) }
             if linkedTaskID != nil {
                 Label("Linked to a task: it's marked done when the agent succeeds", systemImage: "link").font(.caption).foregroundStyle(theme.fg2)
             }
             HStack {
-                if agent.binary != nil {
+                if model.agents.hasCommandLine(agent) {
                     Pill("Terminal", style: .quiet, systemImage: "terminal") { model.startAgentInTerminal(agent, task: text, project: project) }
                 }
                 Spacer()
-                Pill(agent == .antigravity ? "Open" : "Start", systemImage: "sparkles") { start() }
+                Pill(agent == .antigravity && !model.agents.hasCommandLine(.antigravity) ? "Open" : "Start", systemImage: "sparkles") { start() }
                     .opacity(canStart ? 1 : 0.4)
             }
         }

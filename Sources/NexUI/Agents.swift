@@ -79,6 +79,7 @@ public struct AgentStatus: Equatable, Sendable {
 public final class AgentCatalog {
     public private(set) var statuses: [AgentKind: AgentStatus] = [:]
     public private(set) var isLoading = false
+    private var commandLineKinds: Set<AgentKind> = []
     private let shell: DeviceShell
     private let antigravityApp: URL
 
@@ -95,13 +96,28 @@ public final class AgentCatalog {
     public func refresh() async {
         isLoading = true
         defer { isLoading = false }
+        var found: Set<AgentKind> = []
         for kind in AgentKind.allCases {
             guard let binary = kind.binary else { continue }
-            let out = await shell.output(["/bin/zsh", "-lc", "command -v \(binary) >/dev/null && \(binary) --version"])
+            let out = await shell.output(Self.detectCommand(binary))
             let version = out?.split(separator: "\n").first.map { $0.trimmingCharacters(in: .whitespaces) }
-            statuses[kind] = AgentStatus(installed: !(version ?? "").isEmpty, version: version)
+            let installed = !(version ?? "").isEmpty
+            if installed { found.insert(kind) }
+            statuses[kind] = AgentStatus(installed: installed, version: installed ? version : nil)
         }
-        statuses[.antigravity] = AgentStatus(installed: FileManager.default.fileExists(atPath: antigravityApp.path), version: nil)
+        commandLineKinds = found
+        // Without agy, Antigravity still counts as available through its app.
+        if !found.contains(.antigravity) {
+            statuses[.antigravity] = AgentStatus(installed: FileManager.default.fileExists(atPath: antigravityApp.path), version: nil)
+        }
+    }
+
+    /// Whether the agent's command-line tool was found (Antigravity may only have its app).
+    public func hasCommandLine(_ kind: AgentKind) -> Bool { commandLineKinds.contains(kind) }
+
+    /// Finds a CLI through the login shell, also looking in ~/.local/bin.
+    public static func detectCommand(_ binary: String) -> [String] {
+        ["/bin/zsh", "-lc", "export \(AgentKind.localBinPath); command -v \(binary) >/dev/null && \(binary) --version"]
     }
 }
 

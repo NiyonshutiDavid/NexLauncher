@@ -17,8 +17,23 @@ import Foundation
         #expect(AgentCommandBuilder.command(kind: .gemini, autonomy: .full, customTemplate: nil)?.contains("--yolo") == true)
     }
 
-    @Test func antigravityHasNoCommandLineRunner() {
-        #expect(AgentCommandBuilder.command(kind: .antigravity, autonomy: .edit, customTemplate: nil) == nil)
+    @Test func antigravityRunsItsCLIWithTheModeForEachAutonomyLevel() {
+        // agy installs to ~/.local/bin, which a login shell may not have on its PATH.
+        #expect(AgentCommandBuilder.command(kind: .antigravity, autonomy: .edit, customTemplate: nil)
+                == #"PATH="$HOME/.local/bin:$PATH" agy --mode accept-edits -p "$NEX_TASK""#)
+        #expect(AgentCommandBuilder.command(kind: .antigravity, autonomy: .plan, customTemplate: nil)?.contains("--mode plan -p") == true)
+        #expect(AgentCommandBuilder.command(kind: .antigravity, autonomy: .full, customTemplate: nil)?.contains("--dangerously-skip-permissions -p") == true)
+    }
+
+    @Test func antigravityKindDescribesItsCLI() {
+        #expect(AgentKind.antigravity.binary == "agy")
+        #expect(AgentKind.antigravity.signInCommand == "agy")
+        #expect(AgentKind.antigravity.installHint == "curl -fsSL https://antigravity.google/cli/install.sh | bash")
+    }
+
+    @Test func geminiCarriesTheReplacementNotice() {
+        #expect(AgentKind.gemini.notice?.contains("Antigravity CLI") == true)
+        #expect(AgentKind.claude.notice == nil && AgentKind.antigravity.notice == nil)
     }
 
     @Test func customTemplatesGetTheTaskAsAVariableNeverSplicedIn() {
@@ -30,7 +45,8 @@ import Foundation
     @Test func interactiveCommandsQuoteTheTaskSafely() {
         #expect(AgentCommandBuilder.interactiveCommand(kind: .claude, task: "fix it's bug") == #"claude -- 'fix it'\''s bug'"#)
         #expect(AgentCommandBuilder.interactiveCommand(kind: .codex, task: "a") == "codex -- 'a'")
-        #expect(AgentCommandBuilder.interactiveCommand(kind: .antigravity, task: "a") == nil)
+        #expect(AgentCommandBuilder.interactiveCommand(kind: .antigravity, task: "fix it") == #"PATH="$HOME/.local/bin:$PATH" agy -i 'fix it'"#)
+        #expect(AgentCommandBuilder.interactiveCommand(kind: .custom, task: "a") == nil)
     }
 }
 

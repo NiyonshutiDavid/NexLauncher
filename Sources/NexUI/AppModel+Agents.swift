@@ -10,7 +10,7 @@ extension AppModel {
                            autonomy: AgentAutonomy? = nil, replyingTo parent: AgentRun? = nil) -> AgentRun? {
         let text = task.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { agentError = "Describe the task first."; return nil }
-        if kind == .antigravity { openInAntigravity(project: project, task: text); return nil }
+        if kind == .antigravity && !agents.hasCommandLine(.antigravity) { openInAntigravity(project: project, task: text); return nil }
         let level = autonomy ?? settings.settings.agentAutonomy
         guard let command = AgentCommandBuilder.command(kind: kind, autonomy: level, customTemplate: settings.settings.customAgentCommand,
                                                         resumeSessionID: parent?.sessionID) else {

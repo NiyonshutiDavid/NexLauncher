@@ -20,7 +20,22 @@ public enum AgentKind: String, Codable, CaseIterable, Identifiable, Sendable {
         case .claude: return "claude"
         case .codex: return "codex"
         case .gemini: return "gemini"
-        case .antigravity, .custom: return nil
+        case .antigravity: return "agy"
+        case .custom: return nil
+        }
+    }
+
+    /// Prefix for running a CLI: the Antigravity installer puts `agy` in ~/.local/bin, which a login shell
+    /// may not have on its PATH.
+    public static let localBinPath = #"PATH="$HOME/.local/bin:$PATH""#
+
+    /// A short note shown with the agent (e.g. a change by its maker).
+    public var notice: String? {
+        switch self {
+        case .gemini:
+            return "Replaced by Antigravity CLI for Google AI Pro, Ultra and free users since 18 June 2026. Still works with a paid Gemini API key."
+        default:
+            return nil
         }
     }
 
@@ -29,7 +44,7 @@ public enum AgentKind: String, Codable, CaseIterable, Identifiable, Sendable {
         case .claude: return "npm install -g @anthropic-ai/claude-code"
         case .codex: return "npm install -g @openai/codex"
         case .gemini: return "npm install -g @google/gemini-cli"
-        case .antigravity: return "Download Antigravity from antigravity.google"
+        case .antigravity: return "curl -fsSL https://antigravity.google/cli/install.sh | bash"
         case .custom: return "Any command-line agent; set its command in Settings → AI"
         }
     }
@@ -40,7 +55,8 @@ public enum AgentKind: String, Codable, CaseIterable, Identifiable, Sendable {
         case .claude: return "claude"
         case .codex: return "codex login"
         case .gemini: return "gemini"
-        case .antigravity, .custom: return nil
+        case .antigravity: return "agy"            // signs in through the browser on first run
+        case .custom: return nil
         }
     }
 }
@@ -102,7 +118,14 @@ public enum AgentCommandBuilder {
             case .full: return "gemini --yolo --prompt=\(task)"
             }
         case .antigravity:
-            return nil                       // no command-line runner: the app opens instead
+            // Plain text output: agy's JSON and stream formats aren't documented field by field yet.
+            let mode: String
+            switch autonomy {
+            case .plan: mode = "--mode plan"
+            case .edit: mode = "--mode accept-edits"
+            case .full: mode = "--dangerously-skip-permissions"
+            }
+            return "\(AgentKind.localBinPath) agy \(mode) -p \(task)"
         case .custom:
             let template = (customTemplate ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
             guard !template.isEmpty else { return nil }
@@ -121,6 +144,7 @@ public enum AgentCommandBuilder {
     /// For running the agent interactively in a terminal tab (the task is shell-quoted).
     public static func interactiveCommand(kind: AgentKind, task: String) -> String? {
         guard let binary = kind.binary else { return nil }
+        if kind == .antigravity { return "\(AgentKind.localBinPath) agy -i \(CommandBuilder.quote(task))" }
         return "\(binary) -- \(CommandBuilder.quote(task))"
     }
 }

@@ -30,7 +30,7 @@ struct AIPage: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 HeroBanner(eyebrow: "AI mode", title: "Your AI assistant",
-                           subtitle: "Give Claude Code, Codex, Gemini or Antigravity a task in any project. They work in the project folder and report back here.",
+                           subtitle: "Give Claude Code, Codex, Antigravity or Gemini a task in any project. They work in the project folder and report back here.",
                            illustration: .robot)
                 agentsGrid
                 composer
@@ -83,11 +83,14 @@ struct AIPage: View {
                         }
                         Text(kind.displayName).font(.headline).foregroundStyle(theme.fg)
                         Text(statusLine(kind, status)).font(.caption).foregroundStyle(status.installed ? Color.green : theme.fg3).lineLimit(2)
+                        if let notice = kind.notice {
+                            Label(notice, systemImage: "exclamationmark.circle").font(.caption2).foregroundStyle(.orange).lineLimit(3)
+                        }
                         HStack(spacing: 8) {
                             if status.installed, kind.signInCommand != nil {
                                 Button("Sign in") { model.signIn(kind) }.buttonStyle(.plain).font(.caption.weight(.semibold)).foregroundStyle(theme.accent)
                             }
-                            if !status.installed && kind != .custom {
+                            if (!status.installed || (kind == .antigravity && !model.agents.hasCommandLine(.antigravity))) && kind != .custom {
                                 Button("Copy install command") {
                                     NSPasteboard.general.clearContents()
                                     NSPasteboard.general.setString(kind.installHint, forType: .string)
@@ -111,7 +114,8 @@ struct AIPage: View {
         case .custom:
             return model.settings.settings.customAgentCommand.isEmpty ? "Set its command in Settings → AI" : model.settings.settings.customAgentCommand
         case .antigravity:
-            return status.installed ? "App installed · opens the project with your task on the clipboard" : "Not installed"
+            if model.agents.hasCommandLine(.antigravity) { return "Installed · \(status.version ?? "agy")" }
+            return status.installed ? "App only · install the agy CLI to run tasks here" : "Not installed"
         default:
             return status.installed ? "Installed · \(status.version ?? "")" : "Not installed"
         }
@@ -152,16 +156,18 @@ struct AIPage: View {
                         Label("Linked to a task: it's marked done when the agent succeeds", systemImage: "link").font(.caption).foregroundStyle(theme.fg2)
                     }
                     Spacer()
-                    if agent.binary != nil, let project {
+                    if model.agents.hasCommandLine(agent), let project {
                         Pill("Run in terminal", style: .quiet, systemImage: "terminal") { model.startAgentInTerminal(agent, task: text, project: project) }
                     }
-                    Pill(agent == .antigravity ? "Open in Antigravity" : "Start", systemImage: "sparkles") { start() }
+                    Pill(opensApp ? "Open in Antigravity" : "Start", systemImage: "sparkles") { start() }
                         .opacity(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || project == nil ? 0.4 : 1)
                 }
             }
             .padding(20)
         }
     }
+
+    private var opensApp: Bool { agent == .antigravity && !model.agents.hasCommandLine(.antigravity) }
 
     private func start() {
         guard let project else { return }
