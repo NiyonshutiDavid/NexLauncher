@@ -17,13 +17,35 @@ jobs:
       - run: swift test
 
   linux:
+    # Shared core on Ubuntu 24.04 (its GTK is too old for Adwaita for Swift, so the Linux UI is left out).
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     container: swift:6.3-noble
+    env:
+      NEX_CORE_ONLY: "1"
     steps:
       - uses: actions/checkout@v4
-      - name: GTK 4 and libadwaita
-        run: apt-get update && apt-get install -y --no-install-recommends libadwaita-1-dev libgtk-4-dev libvte-2.91-gtk4-dev pkg-config git
+      - run: apt-get update && apt-get install -y --no-install-recommends git
       - run: swift --version
       - run: swift build --build-tests
       - run: swift test
+
+  linux-ui:
+    # The Linux app and its tests in the GNOME 51 SDK the Flatpak ships with (VTE built by the manifest).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+      - name: SDK and Swift extension
+        run: |
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install -y --noninteractive --user flathub org.gnome.Sdk//51 org.gnome.Platform//51 org.freedesktop.Sdk.Extension.swift6//26.08
+      - name: Build dependencies (VTE)
+        run: flatpak-builder --user --force-clean --disable-rofiles-fuse --stop-at=nexlauncher build linux/net.nexventures.NexLauncher.yml
+      - name: Build and test NexLinux
+        run: |
+          flatpak-builder --run build linux/net.nexventures.NexLauncher.yml sh -c \
+            'swift --version && swift build --build-tests && swift test --filter NexLinuxTests'
