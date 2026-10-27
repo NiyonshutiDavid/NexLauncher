@@ -15,11 +15,12 @@ public enum PipedSpawn {
 
     public static func start(_ inv: HostInvocation, in dir: URL, mergeStderr: Bool) throws -> Child {
         var out: [Int32] = [0, 0], err: [Int32] = [0, 0]
-        guard pipe2(&out, O_CLOEXEC) == 0 else { throw POSIXError(.EMFILE) }
-        if !mergeStderr, pipe2(&err, O_CLOEXEC) != 0 {
+        guard pipe(&out) == 0 else { throw POSIXError(.EMFILE) }
+        if !mergeStderr, pipe(&err) != 0 {
             close(out[0]); close(out[1])
             throw POSIXError(.EMFILE)
         }
+        for fd in out + (mergeStderr ? [] : err) { _ = fcntl(fd, F_SETFD, FD_CLOEXEC) }
         var actions = posix_spawn_file_actions_t()
         posix_spawn_file_actions_init(&actions)
         defer { posix_spawn_file_actions_destroy(&actions) }

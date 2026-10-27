@@ -51,5 +51,5 @@ jobs:
         run: flatpak-builder --user --force-clean --disable-rofiles-fuse --stop-at=nexlauncher build linux/net.nexventures.NexLauncher.yml
       - name: Build and test NexLinux
         run: |
-          flatpak-builder --run build linux/net.nexventures.NexLauncher.yml sh -c \
+          flatpak-builder --run --disable-rofiles-fuse build linux/net.nexventures.NexLauncher.yml sh -c \
             'swift --version && swift build --build-tests && swift test --filter NexLinuxTests'
