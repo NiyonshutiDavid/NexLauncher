@@ -116,7 +116,9 @@ public struct AppSettings: Codable, Equatable, Sendable {
     }
 
     public static var supportDirectory: URL {
-        realHome.appendingPathComponent("Library/Application Support/NexLauncher")
+        // Developer option for demo screenshots: `-NexSupportDir <path>` keeps settings, tasks and data apart.
+        if let dir = UserDefaults.standard.string(forKey: "NexSupportDir"), !dir.isEmpty { return URL(fileURLWithPath: dir) }
+        return realHome.appendingPathComponent("Library/Application Support/NexLauncher")
     }
 }
 
