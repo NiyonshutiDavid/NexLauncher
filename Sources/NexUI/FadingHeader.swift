@@ -1,8 +1,8 @@
 import SwiftUI
 import NexCore
 
-/// WhatsApp-style header: no bar. Floating glass buttons and a centred title over a soft fade, so the content
-/// dissolves beneath it — the same in a window and in full screen.
+/// WhatsApp-style header: no bar. Floating glass buttons and a centred title (in the transparent window toolbar)
+/// over a soft fade, so the content dissolves beneath it.
 enum HeaderMetrics {
     /// The header row sits level with the window controls, from the very top of the window.
     static let height: CGFloat = 54
@@ -48,27 +48,24 @@ private struct FadingHeaderModifier<Center: View, Leading: View, Trailing: View>
         content
             .contentMargins(.top, HeaderMetrics.contentInset, for: .scrollContent)
             .overlay(alignment: .top) {
-                ZStack {
-                    // The fade: opaque canvas at the very top, gone by the bottom of the header.
-                    LinearGradient(stops: [.init(color: theme.canvas, location: 0),
-                                           .init(color: theme.canvas.opacity(0.85), location: 0.45),
-                                           .init(color: theme.canvas.opacity(0), location: 1)],
-                                   startPoint: .top, endPoint: .bottom)
-                        .frame(height: HeaderMetrics.height + 34)
-                        .frame(maxHeight: .infinity, alignment: .top)
-                        .allowsHitTesting(false)
-                    center
-                    HStack(spacing: 10) {
-                        leading
-                        Spacer(minLength: 12)
-                        trailing
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 6)
-                }
-                .frame(height: HeaderMetrics.height)
-                .frame(maxWidth: .infinity, alignment: .top)
-                .ignoresSafeArea(.container, edges: .top)     // start at the window's top edge, no strip above
+                // The fade: opaque canvas at the very top, gone by the bottom of the header.
+                LinearGradient(stops: [.init(color: theme.canvas, location: 0),
+                                       .init(color: theme.canvas.opacity(0.85), location: 0.45),
+                                       .init(color: theme.canvas.opacity(0), location: 1)],
+                               startPoint: .top, endPoint: .bottom)
+                    .frame(height: HeaderMetrics.height + 34)
+                    .allowsHitTesting(false)
+                    .ignoresSafeArea(.container, edges: .top)     // start at the window's top edge, no strip above
+            }
+            // The controls live in the window's (transparent) toolbar: it sits over this strip and would
+            // otherwise take every click meant for buttons drawn underneath it.
+            .toolbar {
+                ToolbarItemGroup(placement: .navigation) { leading }
+                    .sharedBackgroundVisibility(.hidden)
+                ToolbarItem(placement: .principal) { center }
+                    .sharedBackgroundVisibility(.hidden)
+                ToolbarItemGroup(placement: .primaryAction) { trailing }
+                    .sharedBackgroundVisibility(.hidden)
             }
     }
 }
