@@ -3,6 +3,8 @@ name: Linux Flatpak
 on:
   push:
     tags: ["v*"]
+    # Also whenever the packaging changes, so the bundle is known to build before a release.
+    paths: ["linux/**", ".github/workflows/linux-release.yml"]
   workflow_dispatch:
 
 jobs:
