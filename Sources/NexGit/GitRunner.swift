@@ -52,8 +52,11 @@ public struct GitRunner: Sendable {
         let child = try PipedSpawn.start(inv, in: dir, mergeStderr: mergeStderr)
         let exit = ExitFlag()
         PipedSpawn.onExit(child.pid) { code in exit.set(); onExit(code) }
-        return GitLaunch(out: FileHandle(fileDescriptor: child.stdout, closeOnDealloc: true),
-                         err: child.stderr.map { FileHandle(fileDescriptor: $0, closeOnDealloc: true) },
+        // Plain reader threads: cancelling a dispatch read source and closing its descriptor while the event
+        // loop still watches it crashes libdispatch on Linux. Each thread closes its pipe at end of output.
+        return GitLaunch(readOut: { readPipe(child.stdout, $0) },
+                         readErr: child.stderr.map { fd in { readPipe(fd, $0) } },
+                         stopReading: {},
                          terminate: { if !exit.isSet { kill(child.pid, SIGTERM) } },
                          isRunning: { !exit.isSet })
         #else
@@ -65,7 +68,10 @@ public struct GitRunner: Sendable {
         p.standardInput = FileHandle.nullDevice
         p.terminationHandler = { proc in onExit(proc.terminationStatus) }
         try p.run()
-        return GitLaunch(out: out.fileHandleForReading, err: err?.fileHandleForReading,
+        let outHandle = out.fileHandleForReading, errHandle = err?.fileHandleForReading
+        return GitLaunch(readOut: { readHandle(outHandle, $0) },
+                         readErr: errHandle.map { h in { readHandle(h, $0) } },
+                         stopReading: { outHandle.readabilityHandler = nil; errHandle?.readabilityHandler = nil },
                          terminate: { if p.isRunning { p.terminate() } }, isRunning: { p.isRunning })
         #endif
     }
@@ -94,15 +100,9 @@ public struct GitRunner: Sendable {
             // A pipe is drained when its handler sees an empty read (EOF); we finish once both pipes
             // are drained AND the process has exited, so no output can be lost to a race. A child git leaves
             // behind can hold the pipes open, so a second after git exits the call finishes with what was read.
-            state.handles = [git.out, git.err!]
-            git.out.readabilityHandler = { h in
-                let d = h.availableData
-                if d.isEmpty { h.readabilityHandler = nil; state.outDrained() } else { state.appendOut(d) }
-            }
-            git.err!.readabilityHandler = { h in
-                let d = h.availableData
-                if d.isEmpty { h.readabilityHandler = nil; state.errDrained() } else { state.appendErr(d) }
-            }
+            state.stopReading = git.stopReading
+            git.readOut { d in if let d { state.appendOut(d) } else { state.outDrained() } }
+            git.readErr! { d in if let d { state.appendErr(d) } else { state.errDrained() } }
             DispatchQueue.global().asyncAfter(deadline: .now() + timeout) {
                 // Fires even if git already exited but a child still holds the pipe open. The timeout is
                 // recorded first: once git is stopped it can exit (and finish the call) at any moment.
@@ -129,9 +129,8 @@ extension GitRunner {
                     return
                 }
                 box.git = git
-                git.out.readabilityHandler = { h in
-                    let d = h.availableData
-                    if d.isEmpty { h.readabilityHandler = nil; box.drained(); return }
+                git.readOut { d in
+                    guard let d else { box.drained(); return }
                     for line in box.split(d) { onLine(line) }
                 }
                 if Task.isCancelled { git.terminate() }
@@ -142,12 +141,37 @@ extension GitRunner {
     }
 }
 
+/// A started git: each `read` callback gets output chunks, then nil at end of output.
 struct GitLaunch: @unchecked Sendable {
-    let out: FileHandle
-    let err: FileHandle?
+    let readOut: (@escaping @Sendable (Data?) -> Void) -> Void
+    let readErr: ((@escaping @Sendable (Data?) -> Void) -> Void)?
+    let stopReading: @Sendable () -> Void
     let terminate: @Sendable () -> Void
     let isRunning: @Sendable () -> Bool
 }
+
+private func readHandle(_ h: FileHandle, _ onData: @escaping @Sendable (Data?) -> Void) {
+    h.readabilityHandler = { h in
+        let d = h.availableData
+        if d.isEmpty { h.readabilityHandler = nil; onData(nil) } else { onData(d) }
+    }
+}
+
+#if os(Linux)
+private func readPipe(_ fd: Int32, _ onData: @escaping @Sendable (Data?) -> Void) {
+    Thread.detachNewThread {
+        var chunk = [UInt8](repeating: 0, count: 16384)
+        while true {
+            let n = read(fd, &chunk, chunk.count)
+            if n < 0 && errno == EINTR { continue }
+            if n <= 0 { break }
+            onData(Data(chunk[0..<n]))
+        }
+        close(fd)
+        onData(nil)
+    }
+}
+#endif
 
 final class ExitFlag: @unchecked Sendable {
     private let lock = NSLock()
@@ -196,7 +220,7 @@ private final class StreamBox: @unchecked Sendable {
         lock.lock(); defer { lock.unlock() }
         guard drainedFlag || !requireDrained, let status, let c = continuation else { return }
         continuation = nil
-        git?.out.readabilityHandler = nil
+        git?.stopReading()
         c.resume(returning: status)
     }
     func fail(_ error: Error) {
@@ -213,7 +237,7 @@ private final class RunState: @unchecked Sendable {
     private var out = Data(), err = Data()
     private var outDone = false, errDone = false, code: Int32?
     /// Stops reading when the call finishes (a lingering child may never close the pipes).
-    var handles: [FileHandle] = []
+    var stopReading: @Sendable () -> Void = {}
 
     init(_ cont: CheckedContinuation<GitResult, Error>) { self.cont = cont }
 
@@ -233,7 +257,7 @@ private final class RunState: @unchecked Sendable {
         lock.lock(); defer { lock.unlock() }
         guard (outDone && errDone) || !requireDrained, let code, let c = cont else { return }
         cont = nil
-        handles.forEach { $0.readabilityHandler = nil }
+        stopReading()
         c.resume(returning: GitResult(
             code: code,
             stdout: String(decoding: out, as: UTF8.self),
