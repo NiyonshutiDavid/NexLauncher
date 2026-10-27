@@ -4,12 +4,22 @@ import NexCore
 @testable import NexApp
 import NexTestSupport
 
+/// Records commands; refresh runs its lookups concurrently, so every access is locked.
 final class FakeDeviceShell: DeviceShell, @unchecked Sendable {
-    var outputs: [String: String] = [:]
-    private(set) var ran: [[String]] = []
-    private(set) var detached: [[String]] = []
-    func output(_ args: [String]) async -> String? { ran.append(args); return outputs[args.joined(separator: " ")] }
-    func launchDetached(_ args: [String]) { detached.append(args) }
+    private let lock = NSLock()
+    private var _outputs: [String: String] = [:], _ran: [[String]] = [], _detached: [[String]] = []
+    var outputs: [String: String] {
+        get { lock.lock(); defer { lock.unlock() }; return _outputs }
+        set { lock.lock(); _outputs = newValue; lock.unlock() }
+    }
+    var ran: [[String]] { lock.lock(); defer { lock.unlock() }; return _ran }
+    var detached: [[String]] { lock.lock(); defer { lock.unlock() }; return _detached }
+    func output(_ args: [String]) async -> String? {
+        lock.lock(); defer { lock.unlock() }
+        _ran.append(args)
+        return _outputs[args.joined(separator: " ")]
+    }
+    func launchDetached(_ args: [String]) { lock.lock(); _detached.append(args); lock.unlock() }
 }
 
 private let simctlFixture = """

@@ -51,5 +51,8 @@ jobs:
         run: flatpak-builder --user --force-clean --disable-rofiles-fuse --stop-at=nexlauncher build linux/net.nexventures.NexLauncher.yml
       - name: Build and test NexLinux
         run: |
-          flatpak-builder --run --disable-rofiles-fuse build linux/net.nexventures.NexLauncher.yml sh -c \
-            'swift --version && swift build --build-tests && swift test --filter NexLinuxTests'
+          flatpak build --share=network --filesystem="$GITHUB_WORKSPACE" \
+            --env=PATH=/usr/lib/sdk/swift6/bin:/app/bin:/usr/bin \
+            --env=LD_LIBRARY_PATH=/usr/lib/sdk/swift6/lib:/app/lib \
+            --env=PKG_CONFIG_PATH=/app/lib/pkgconfig:/app/share/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig \
+            build sh -c "cd '$GITHUB_WORKSPACE' && swift --version && swift build --build-tests && swift test --filter NexLinuxTests"
