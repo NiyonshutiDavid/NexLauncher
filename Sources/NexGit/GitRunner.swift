@@ -1,4 +1,5 @@
 import Foundation
+import NexCore
 
 public struct GitResult: Sendable {
     public let code: Int32
@@ -6,13 +7,37 @@ public struct GitResult: Sendable {
     public let stderr: String
 }
 
-/// Runs `/usr/bin/git` with an argument array (never through a shell).
+/// Runs git from PATH with an argument array (never through a shell); inside a Flatpak, the host's git.
 public struct GitRunner: Sendable {
     private let extraEnvironment: [String: String]
     var extraEnvironmentForStream: [String: String] { extraEnvironment }
 
     public init(extraEnvironment: [String: String] = [:]) {
         self.extraEnvironment = extraEnvironment
+    }
+
+    /// How git is started for `args` in `dir`.
+    public static func invocation(_ args: [String], in dir: URL, environment: [String: String], flatpak: Bool) -> HostInvocation {
+        HostCommand.exec("git", args, in: dir, environment: environment, flatpak: flatpak)
+    }
+
+    /// The variables every git call gets: no prompts or editors, plain English output, literal paths.
+    static func gitEnvironment(_ extra: [String: String]) -> [String: String] {
+        var env = ["GIT_TERMINAL_PROMPT": "0", "GIT_EDITOR": "true", "LC_ALL": "C",
+                   "GIT_LITERAL_PATHSPECS": "1"]   // paths are file names, never globs ([id], *, ?)
+        env.merge(extra) { $1 }
+        return env
+    }
+
+    /// Configures `p` to run git with `args` in `dir`.
+    static func configure(_ p: Process, args: [String], dir: URL, extra: [String: String]) {
+        let inv = invocation(args, in: dir, environment: gitEnvironment(extra), flatpak: Platform.isFlatpak)
+        p.executableURL = URL(fileURLWithPath: inv.executable)
+        p.arguments = inv.arguments
+        p.currentDirectoryURL = dir
+        var environment = ProcessInfo.processInfo.environment
+        environment.merge(inv.environment) { $1 }
+        p.environment = environment
     }
 
     /// Returns stdout, throwing `.commandFailed` on a non-zero exit.
@@ -28,16 +53,7 @@ public struct GitRunner: Sendable {
         let env = extraEnvironment
         return try await withCheckedThrowingContinuation { cont in
             let p = Process()
-            p.executableURL = URL(fileURLWithPath: "/usr/bin/git")
-            p.arguments = args
-            p.currentDirectoryURL = dir
-            var environment = ProcessInfo.processInfo.environment
-            environment["GIT_TERMINAL_PROMPT"] = "0"
-            environment["GIT_EDITOR"] = "true"
-            environment["LC_ALL"] = "C"
-            environment["GIT_LITERAL_PATHSPECS"] = "1"   // paths are file names, never globs ([id], *, ?)
-            environment.merge(env) { $1 }
-            p.environment = environment
+            Self.configure(p, args: args, dir: dir, extra: env)
             let out = Pipe(), err = Pipe()
             p.standardOutput = out
             p.standardError = err
@@ -77,16 +93,7 @@ extension GitRunner {
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Int32, Error>) in
                 let p = Process()
-                p.executableURL = URL(fileURLWithPath: "/usr/bin/git")
-                p.arguments = args
-                p.currentDirectoryURL = dir
-                var environment = ProcessInfo.processInfo.environment
-                environment["GIT_TERMINAL_PROMPT"] = "0"
-                environment["GIT_EDITOR"] = "true"
-                environment["LC_ALL"] = "C"
-                environment["GIT_LITERAL_PATHSPECS"] = "1"
-                environment.merge(extraEnvironmentForStream) { $1 }
-                p.environment = environment
+                Self.configure(p, args: args, dir: dir, extra: extraEnvironmentForStream)
                 let pipe = Pipe()
                 p.standardOutput = pipe
                 p.standardError = pipe

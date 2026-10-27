@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import NexCore
 @testable import NexProcess
 
 @Suite struct HostCommandTests {

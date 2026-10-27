@@ -1,5 +1,4 @@
 import Foundation
-import NexCore
 
 /// A program to start: what to run, its arguments, and environment to add.
 public struct HostInvocation: Equatable, Sendable {
@@ -11,7 +10,7 @@ public struct HostInvocation: Equatable, Sendable {
 /// Builds how a command reaches the user's system. Inside a Flatpak, tools live on the host, so everything goes
 /// through `flatpak-spawn --host`; the command itself only ever travels in the `NEX_CMD` environment variable.
 public enum HostCommand {
-    static let flatpakSpawn = "/usr/bin/flatpak-spawn"
+    public static let flatpakSpawn = "/usr/bin/flatpak-spawn"
 
     /// Runs `command` in a login shell. In Flatpak, the host shell prints `NEXPGID=<n>` (its process group) first.
     public static func shell(_ command: String, in directory: URL, environment: [String: String], flatpak: Bool, shell: String) -> HostInvocation {
@@ -23,12 +22,16 @@ public enum HostCommand {
         return HostInvocation(executable: flatpakSpawn, arguments: args, environment: [:])
     }
 
-    /// Runs a tool found on PATH with an argument array (no shell).
-    public static func exec(_ tool: String, _ arguments: [String], in directory: URL, flatpak: Bool) -> HostInvocation {
+    /// Runs a tool found on PATH with an argument array (no shell). Outside Flatpak the environment is the
+    /// caller's to set on the process; inside, it has to travel as `--env` arguments.
+    public static func exec(_ tool: String, _ arguments: [String], in directory: URL,
+                            environment: [String: String] = [:], flatpak: Bool) -> HostInvocation {
         if flatpak {
-            return HostInvocation(executable: flatpakSpawn, arguments: ["--host", "--directory=\(directory.path)", tool] + arguments, environment: [:])
+            let env = environment.sorted { $0.key < $1.key }.map { "--env=\($0.key)=\($0.value)" }
+            return HostInvocation(executable: flatpakSpawn, arguments: ["--host", "--directory=\(directory.path)"] + env + [tool] + arguments,
+                                  environment: [:])
         }
-        return HostInvocation(executable: "/usr/bin/env", arguments: [tool] + arguments, environment: [:])
+        return HostInvocation(executable: "/usr/bin/env", arguments: [tool] + arguments, environment: environment)
     }
 
     /// The shell services run in. macOS keeps `/bin/zsh` as it always has; Linux uses the login shell when it
