@@ -32,6 +32,9 @@ struct NexLauncherApp: App {
         WindowGroup("NexLauncher", id: "main") {
             ContentView(model: model)
                 .frame(minWidth: 960, minHeight: 640)
+                // Full screen: the (empty) toolbar only slides in with the menu bar. Hiding it outright would make
+                // macOS drop the floating sidebar below the title bar area with square-ish corners.
+                .windowToolbarFullScreenVisibility(.onHover)
                 .onOpenURL { url in Task { await model.handle(url: url) } }
                 .task {
                     model.openMainWindowAction = { openWindow(id: "main") }

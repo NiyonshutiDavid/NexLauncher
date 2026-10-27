@@ -29,7 +29,6 @@ struct BreadcrumbBar: View {
         .padding(.horizontal, 12).frame(height: 34)
         .fixedSize()                            // the toolbar would otherwise squeeze it to "Proje…"
         .glassEffect(.regular, in: Capsule())
-        .frame(maxWidth: 520)
         .animation(.spring(duration: 0.3), value: crumbs.map(\.title))
     }
 

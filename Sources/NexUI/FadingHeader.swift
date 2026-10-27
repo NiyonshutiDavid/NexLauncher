@@ -62,8 +62,8 @@ private struct FadingHeaderModifier<Center: View, Leading: View, Trailing: View>
                         .frame(height: HeaderMetrics.height + 34)
                         .allowsHitTesting(false)
                     if fullScreen {
-                        // Full screen: the toolbar is hidden (macOS gives it an opaque bar there), so the
-                        // controls are drawn here, where nothing covers them.
+                        // Full screen: the toolbar only appears on hover (on macOS's opaque bar), so the
+                        // controls are drawn here instead.
                         ZStack {
                             center
                             HStack(spacing: 10) {

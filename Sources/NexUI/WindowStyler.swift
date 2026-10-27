@@ -1,9 +1,8 @@
 import SwiftUI
 import AppKit
 
-/// Reaches the hosting NSWindow: transparent title bar with no separator. In full screen macOS draws the toolbar
-/// on an opaque bar, so it is hidden there and `isFullScreen` tells the pages to draw their header controls
-/// themselves.
+/// Reaches the hosting NSWindow: transparent title bar with no separator. In full screen the toolbar only shows on
+/// hover (on macOS's own opaque bar), so `isFullScreen` tells the pages to draw their header controls themselves.
 struct WindowStyler: NSViewRepresentable {
     @Binding var isFullScreen: Bool
 
@@ -32,18 +31,13 @@ struct WindowStyler: NSViewRepresentable {
         let center = NotificationCenter.default
         coordinator.observers = [
             center.addObserver(forName: NSWindow.willEnterFullScreenNotification, object: window, queue: .main) { _ in
-                window.toolbar?.isVisible = false
                 MainActor.assumeIsolated { binding.wrappedValue = true }
             },
             center.addObserver(forName: NSWindow.didExitFullScreenNotification, object: window, queue: .main) { _ in
-                window.toolbar?.isVisible = true
                 MainActor.assumeIsolated { binding.wrappedValue = false }
             },
         ]
-        if window.styleMask.contains(.fullScreen) {
-            window.toolbar?.isVisible = false
-            isFullScreen = true
-        }
+        if window.styleMask.contains(.fullScreen) { isFullScreen = true }
         // Developer option for screenshots: `-NexFullScreen YES`.
         if UserDefaults.standard.bool(forKey: "NexFullScreen"), !window.styleMask.contains(.fullScreen) {
             window.toggleFullScreen(nil)
