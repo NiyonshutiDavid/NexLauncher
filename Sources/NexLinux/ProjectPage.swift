@@ -126,7 +126,7 @@ struct LogsTab: View {
                 VStack(spacing: 4) {
                     Text(target.kind.rawValue.capitalized).style("heading").halign(.start)
                     Text(lines.isEmpty ? "No output yet." : lines.suffix(200).joined(separator: "\n"))
-                        .style("monospace").halign(.start).selectable(true).wrap()
+                        .selectable(true).wrap(true).style("monospace").halign(.start)
                 }
                 .padding(12)
                 .style("card")

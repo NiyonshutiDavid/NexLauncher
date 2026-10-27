@@ -16,7 +16,7 @@ final class LinuxNotifier: Notifying, @unchecked Sendable {
         await MainActor.run {
             guard let notification = g_notification_new(request.title) else { return }
             g_notification_set_body(notification, request.body)
-            g_application_send_notification(OpaquePointer(app.pointer), nil, notification)
+            g_application_send_notification(app.pointer?.cast(), nil, notification)
             g_object_unref(notification)
         }
     }

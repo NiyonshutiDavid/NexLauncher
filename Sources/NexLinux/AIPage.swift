@@ -13,7 +13,7 @@ struct AIPage: View {
             VStack(spacing: 16) {
                 Text("Your AI assistant").style("title-1").halign(.start)
                 Text("Give Claude Code, Codex, Antigravity or Gemini a task in any project. They work in the project folder and report back here.")
-                    .wrap().style("dim-label").halign(.start)
+                    .wrap(true).style("dim-label").halign(.start)
                 Form {
                     ForEach(AgentKind.allCases.map { ChoiceItem(id: $0.rawValue) }) { item in
                         let kind = AgentKind(rawValue: item.id)!
@@ -74,7 +74,7 @@ struct AgentComposer: View {
                 .innerPadding(10)
                 .frame(minHeight: 110)
                 .style("card")
-            if let error = model.agentError { Text(error).style("error").wrap().halign(.start) }
+            if let error = model.agentError { Text(error).wrap(true).style("error").halign(.start) }
             Button("Start") {
                 guard let project, let kind = AgentKind(rawValue: agent) else { return }
                 let linked = model.tasks.first { $0.id == model.agentDraft?.taskID }
@@ -119,9 +119,9 @@ struct AgentRunRow: View {
                 Text(statusText).style("dim-label")
                 if run.isRunning { Button("Stop") { Task { await model.stopAgent(run) } }.destructive().pill() }
             }
-            Text(run.task).wrap().halign(.start)
-            Text(events).style("monospace").style("dim-label").wrap().halign(.start).selectable(true)
-            if let answer = run.answer { Text(answer).wrap().halign(.start).selectable(true) }
+            Text(run.task).wrap(true).halign(.start)
+            Text(events).wrap(true).selectable(true).style("monospace").style("dim-label").halign(.start)
+            if let answer = run.answer { Text(answer).wrap(true).selectable(true).halign(.start) }
             if !run.isRunning {
                 Form {
                     EntryRow("Reply", text: $reply)

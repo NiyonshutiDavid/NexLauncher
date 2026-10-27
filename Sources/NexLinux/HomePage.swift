@@ -79,8 +79,8 @@ struct ProjectCard: View {
 
     var view: Body {
         VStack(spacing: 6) {
-            Text(project.name).style("heading").halign(.start).ellipsize()
-            Text(ProjectSubtitle.text(for: project)).style("dim-label").halign(.start).ellipsize()
+            Text(project.name).ellipsize().style("heading").halign(.start)
+            Text(ProjectSubtitle.text(for: project)).ellipsize().style("dim-label").halign(.start)
             HStack(spacing: 6) {
                 if running {
                     Button("Stop") { Task { await model.stop(project) } }.destructive().pill()

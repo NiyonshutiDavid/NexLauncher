@@ -3,6 +3,7 @@ import Observation
 import Adwaita
 import NexApp
 import NexCore
+import NexGit
 
 /// Profile, git, AI, appearance, notifications and general settings (the Mac Settings page, without the Dock and
 /// widget options that don't exist on Linux).
@@ -77,9 +78,10 @@ struct OnboardingContent: View {
         self._flow = State(wrappedValue: OnboardingState(flow: OnboardingModel(model: model)))
     }
 
+    private var f: OnboardingModel { flow.flow }
+
     var view: Body {
-        let f = flow.flow
-        return VStack(spacing: 14) {
+        VStack(spacing: 14) {
             Text(title(f.step)).style("title-1").halign(.start)
             switch f.step {
             case .name:
@@ -99,7 +101,7 @@ struct OnboardingContent: View {
             default:
                 Text(f.step == .welcome
                      ? "NexLauncher finds the apps in your projects folder and runs them, with git, a terminal and AI agents built in."
-                     : "You can change all of this later in Settings.").wrap().halign(.start)
+                     : "You can change all of this later in Settings.").wrap(true).halign(.start)
             }
             HStack(spacing: 8) {
                 if !f.isFirst { Button("Back") { f.back() }.pill() }
@@ -139,7 +141,7 @@ struct OnboardingState: Model {
         withObservationTracking {
             _ = (flow.step, flow.name, flow.folder, flow.gitName, flow.gitEmail, flow.isFinishing)
         } onChange: {
-            MainActor.assumeIsolated { Idle { setModel { $0.tick &+= 1 }; observe() } }
+            MainActor.assumeIsolated { _ = Idle { setModel { $0.tick &+= 1 }; observe() } }
         }
     }
 }

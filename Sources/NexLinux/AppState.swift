@@ -20,7 +20,7 @@ struct AppState: Model {
         withObservationTracking { app.touchViewState() } onChange: {
             // onChange fires before the new value is stored: re-render on the next main-loop turn.
             MainActor.assumeIsolated {
-                Idle {
+                _ = Idle {
                     setModel { $0.tick &+= 1 }
                     observe()
                 }

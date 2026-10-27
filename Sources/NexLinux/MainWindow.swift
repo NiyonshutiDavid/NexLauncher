@@ -1,5 +1,6 @@
 import Foundation
 import Adwaita
+import CAdw
 import NexApp
 import NexCore
 
@@ -35,8 +36,10 @@ struct MainWindow: WindowView {
             guard !scanned else { return }
             scanned = true
             Shared.terminals.onChange = { state.setModel { $0.tick &+= 1 } }
-            Shared.services.presentMainWindow = { window.present(); return true }
+            Shared.services.presentMainWindow = { gtk_window_present(window.pointer?.cast()); return true }
             Task { await state.app.refresh() }
         }
     }
+
+    func window(_ window: Window) -> Window { window }
 }

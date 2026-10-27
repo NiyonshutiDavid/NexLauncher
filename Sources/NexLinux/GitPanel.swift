@@ -20,7 +20,7 @@ struct GitState: Model {
             _ = (git.status, git.branches, git.history, git.identity, git.selectedFile, git.diffText, git.isBusy,
                  git.pendingPullChoice, git.errorMessage, git.summary, git.descriptionText)
         } onChange: {
-            MainActor.assumeIsolated { Idle { setModel { $0.tick &+= 1 }; observe() } }
+            MainActor.assumeIsolated { _ = Idle { setModel { $0.tick &+= 1 }; observe() } }
         }
     }
 }
@@ -60,11 +60,11 @@ struct GitPanel: View {
                     Button("Cancel") { git.dismissPullChoice() }.flat()
                 }
             }
-            if let error = git.errorMessage { Text(error).style("error").wrap().halign(.start) }
+            if let error = git.errorMessage { Text(error).wrap(true).style("error").halign(.start) }
             changes
             commitBox
             if !git.diffText.isEmpty {
-                Text(git.diffText).style("monospace").selectable(true).halign(.start).padding(12).style("card")
+                Text(git.diffText).selectable(true).style("monospace").halign(.start).padding(12).style("card")
             }
             history
         }

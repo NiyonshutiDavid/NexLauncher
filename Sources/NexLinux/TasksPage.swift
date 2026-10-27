@@ -84,7 +84,7 @@ struct DevicesSection: View {
                     ActionRow(device.name).subtitle("Ready to run")
                 }
             }
-            if let hint = model.devices.androidHint { Text(hint).style("dim-label").wrap().halign(.start) }
+            if let hint = model.devices.androidHint { Text(hint).wrap(true).style("dim-label").halign(.start) }
         }
         .onAppear {
             guard !loaded else { return }

@@ -23,8 +23,8 @@ final class LinuxPlatformServices: PlatformServices {
     var presentMainWindow: () -> Bool = { false }
     var windowIsActive: () -> Bool = { true }
 
-    init(launcher: URILaunching = GLibLauncher()) {
-        self.launcher = launcher
+    init(launcher: URILaunching? = nil) {
+        self.launcher = launcher ?? GLibLauncher()
     }
 
     func open(_ url: URL) { launcher.launch(uri: url.absoluteString) }

@@ -12,15 +12,15 @@ struct SetupDialogContent: View {
             if let setup = model.setup {
                 Text("Set up \(setup.project.name)").style("title-2").halign(.start)
                 Text("Some dependencies are missing. NexLauncher will install them with the project's own tools, then run it.")
-                    .wrap().halign(.start)
+                    .wrap(true).halign(.start)
                 Form {
                     ForEach(setup.steps.map { ChoiceItem(id: $0.title) }) { item in
                         let step = setup.steps.first { $0.title == item.id }!
                         ActionRow(step.title).subtitle(statusText(step.status) + "  " + step.command)
                     }
                 }
-                if let line = model.setupLastLine { Text(line).style("monospace").style("dim-label").halign(.start).ellipsize() }
-                if case .failed(let message) = setup.phase { Text(message).style("error").wrap().halign(.start) }
+                if let line = model.setupLastLine { Text(line).ellipsize().style("monospace").style("dim-label").halign(.start) }
+                if case .failed(let message) = setup.phase { Text(message).wrap(true).style("error").halign(.start) }
                 HStack(spacing: 8) {
                     Button("Cancel") { model.cancelInstall() }.pill()
                     if setup.phase == .confirm {
@@ -78,9 +78,9 @@ struct AddProjectDialogContent: View {
                     EntryRow("Folder name", text: Binding(get: { clone.name }, set: { clone.setName($0) }))
                 }
                 if let problem = clone.problem(in: parent) { Text(problem).style("error").halign(.start) }
-                if busy { Text(progress).style("monospace").style("dim-label").halign(.start).ellipsize() }
+                if busy { Text(progress).ellipsize().style("monospace").style("dim-label").halign(.start) }
             }
-            if let error { Text(error).style("error").wrap().halign(.start) }
+            if let error { Text(error).wrap(true).style("error").halign(.start) }
             Text("In \(parent.path)").style("dim-label").halign(.start)
             HStack(spacing: 8) {
                 Button("Cancel") { model.sheet = nil }.pill()
