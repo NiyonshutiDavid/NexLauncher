@@ -45,6 +45,36 @@ import NexCore
     }
 }
 
+/// A terminal tab that runs a command (an agent, a sign-in) runs it as part of starting the shell, then stays
+/// open in an interactive login shell. The command only travels in NEX_CMD.
+@Suite struct TerminalInvocationTests {
+    let dir = URL(fileURLWithPath: "/home/alex/Café App")
+    let command = "claude 'fix the footer'; echo $HOME"
+
+    @Test func plainTabIsALoginShell() {
+        let inv = HostCommand.terminal(shell: "/bin/bash", in: dir, command: nil, flatpak: false, user: [:])
+        #expect(inv.executable == "/bin/bash")
+        #expect(inv.arguments == ["-l"])
+    }
+
+    @Test func commandRunsThenTheShellStays() {
+        let inv = HostCommand.terminal(shell: "/bin/bash", in: dir, command: command, flatpak: false, user: [:])
+        #expect(inv.executable == "/bin/bash")
+        #expect(inv.arguments == ["-lc", #"eval "$NEX_CMD"; exec "$0" -l"#, "/bin/bash"])
+        #expect(inv.environment["NEX_CMD"] == command)
+    }
+
+    @Test func flatpakRunsOnTheHostWithoutSplicing() {
+        let inv = HostCommand.terminal(shell: "/bin/bash", in: dir, command: command, flatpak: true, user: [:])
+        #expect(inv.executable == HostCommand.flatpakSpawn)
+        #expect(inv.arguments.contains("--directory=\(dir.path)"))
+        #expect(inv.arguments.contains("--env=NEX_CMD=\(command)"))
+        #expect(inv.arguments.contains("--env=TERM=xterm-256color"))
+        #expect(inv.arguments.suffix(3) == ["-lc", #"eval "$NEX_CMD"; exec "$0" -l"#, "/bin/bash"])
+        #expect(inv.arguments.filter { $0.contains("claude") }.count == 1)
+    }
+}
+
 @Suite(.serialized) struct HostPGIDTests {
     @Test func lineIsRecordedAndHidden() {
         let rest = ProcessSpawner.takeHostPGID(from: ["NEXPGID=4242", "VITE ready"], pid: 99_001)

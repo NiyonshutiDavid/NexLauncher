@@ -57,6 +57,24 @@ public enum HostCommand {
         return HostInvocation(executable: args[0], arguments: Array(args.dropFirst()), environment: environment)
     }
 
+    /// A terminal tab: an interactive login shell, which first runs `command` when there is one. On the host
+    /// inside a Flatpak. The command only travels in NEX_CMD.
+    public static func terminal(shell: String, in directory: URL, command: String?, flatpak: Bool,
+                                user: [String: String] = userEnvironment) -> HostInvocation {
+        var environment = user
+        var shellArgs = ["-l"]
+        if let command {
+            environment["NEX_CMD"] = command
+            shellArgs = ["-lc", #"eval "$NEX_CMD"; exec "$0" -l"#, shell]
+        }
+        guard flatpak else { return HostInvocation(executable: shell, arguments: shellArgs, environment: environment) }
+        environment["TERM"] = "xterm-256color"
+        let env = environment.sorted { $0.key < $1.key }.map { "--env=\($0.key)=\($0.value)" }
+        return HostInvocation(executable: flatpakSpawn,
+                              arguments: ["--host", "--watch-bus", "--directory=\(directory.path)"] + env + [shell] + shellArgs,
+                              environment: [:])
+    }
+
     /// The shell services run in. macOS keeps `/bin/zsh` as it always has; Linux uses the login shell when it
     /// understands POSIX syntax (the commands NexLauncher builds are POSIX), else bash, else `/bin/sh`.
     public static func defaultShell(os: HostOS, loginShell: String, bashExists: Bool = FileManager.default.fileExists(atPath: "/bin/bash")) -> String {

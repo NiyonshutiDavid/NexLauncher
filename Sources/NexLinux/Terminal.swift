@@ -21,18 +21,15 @@ final class LinuxTerminalHost: TerminalHost {
     func openTab(at directory: URL, command: String?) -> UUID {
         guard let widget = vte_terminal_new() else { return UUID() }
         _ = g_object_ref_sink(widget)             // owned here, not by whichever view shows it
-        let shell = HostCommand.defaultShell
-        var argv: [String]
-        if Platform.isFlatpak {
-            argv = [HostCommand.flatpakSpawn, "--host", "--watch-bus", "--directory=\(directory.path)",
-                    "--env=TERM=xterm-256color", shell, "-l"]
-        } else {
-            argv = [shell, "-l"]
+        // The command (an agent, a sign-in) runs as part of starting the shell: text fed before VTE has attached
+        // the terminal would be dropped.
+        let inv = HostCommand.terminal(shell: HostCommand.defaultShell, in: directory, command: command, flatpak: Platform.isFlatpak)
+        let env = inv.environment.map { "\($0.key)=\($0.value)" }
+        withCStrings([inv.executable] + inv.arguments) { cArgv in
+            withCStrings(env) { cEnv in
+                vte_terminal_spawn_async(widget, 0, directory.path, cArgv, env.isEmpty ? nil : cEnv, 0, nil, nil, nil, -1, nil, nil, nil)
+            }
         }
-        withCStrings(argv) { cArgv in
-            vte_terminal_spawn_async(widget, 0, directory.path, cArgv, nil, 0, nil, nil, nil, -1, nil, nil, nil)
-        }
-        if let command { feed(widget, command + "\n") }
         let tab = Tab(id: UUID(), directory: directory, widget: widget)
         tabs.append(tab)
         selectedID = tab.id
@@ -50,10 +47,6 @@ final class LinuxTerminalHost: TerminalHost {
 
     func closeAll() { tabs.map(\.id).forEach(close) }
 
-    private func feed(_ widget: UnsafeMutableRawPointer, _ text: String) {
-        text.withCString { vte_terminal_feed_child(widget, $0, Int(strlen($0))) }
-    }
-
     private func withCStrings(_ strings: [String], _ body: (UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>) -> Void) {
         var pointers: [UnsafeMutablePointer<CChar>?] = strings.map { strdup($0) } + [nil]
         defer { pointers.forEach { free($0) } }
@@ -61,15 +54,34 @@ final class LinuxTerminalHost: TerminalHost {
     }
 }
 
-/// Shows one VTE terminal widget.
+/// Shows one VTE terminal widget, in a box so another tab's terminal can take its place.
 struct VteView: AdwaitaWidget {
     let widget: UnsafeMutableRawPointer
 
     func container<Data>(data: WidgetData, type: Data.Type) -> ViewStorage where Data: ViewRenderData {
-        .init(OpaquePointer(widget))
+        let storage = ViewStorage(OpaquePointer(gtk_box_new(GTK_ORIENTATION_VERTICAL, 0)))
+        show(in: storage)
+        return storage
     }
 
-    func update<Data>(_ storage: ViewStorage, data: WidgetData, updateProperties: Bool, type: Data.Type) where Data: ViewRenderData {}
+    func update<Data>(_ storage: ViewStorage, data: WidgetData, updateProperties: Bool, type: Data.Type) where Data: ViewRenderData {
+        show(in: storage)
+    }
+
+    private func show(in storage: ViewStorage) {
+        let box = UnsafeMutablePointer<GtkBox>(storage.opaquePointer)
+        if let shown = storage.fields["vte-widget"] as? UnsafeMutableRawPointer {
+            guard shown != widget else { return }
+            gtk_box_remove(box, shown.assumingMemoryBound(to: GtkWidget.self))
+        }
+        let terminal = widget.assumingMemoryBound(to: GtkWidget.self)
+        // A terminal shows in one place at a time: take it from a page that's still being torn down.
+        if let parent = gtk_widget_get_parent(terminal) { gtk_box_remove(UnsafeMutablePointer<GtkBox>(OpaquePointer(parent)), terminal) }
+        gtk_widget_set_hexpand(terminal, 1)
+        gtk_widget_set_vexpand(terminal, 1)
+        gtk_box_append(box, terminal)
+        storage.fields["vte-widget"] = widget
+    }
 }
 
 /// The Terminal tab: tabs for this project's folder and a new-tab button.
@@ -78,21 +90,24 @@ struct TerminalTab: View {
     let directory: URL
 
     private var host: LinuxTerminalHost? { model.terminals as? LinuxTerminalHost }
+    /// This folder's tabs only.
+    private var tabs: [LinuxTerminalHost.Tab] { host?.tabs.filter { $0.directory == directory } ?? [] }
+    private var selected: LinuxTerminalHost.Tab? { tabs.first { $0.id == host?.selectedID } ?? tabs.last }
 
     var view: Body {
         VStack(spacing: 8) {
             HStack(spacing: 6) {
-                ForEach(host?.tabs ?? []) { tab in
+                ForEach(tabs) { tab in
                     Button(tab.directory.lastPathComponent) { host?.selectedID = tab.id; host?.onChange() }
                         .flat()
                 }
                 Button(icon: .default(icon: .listAdd)) { model.openTerminal(at: directory) }.flat().tooltip("New terminal tab")
-                if let id = host?.selectedID {
+                if let id = selected?.id {
                     Button(icon: .custom(name: "window-close-symbolic")) { host?.close(id) }.flat().tooltip("Close this tab")
                 }
             }
             .halign(.start)
-            if let host, let tab = host.tabs.first(where: { $0.id == host.selectedID }) {
+            if let tab = selected {
                 VteView(widget: tab.widget).vexpand().hexpand().frame(minHeight: 420)
             } else {
                 Button("Open a terminal here") { model.openTerminal(at: directory) }.pill().halign(.center).padding(24)
