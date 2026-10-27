@@ -11,6 +11,9 @@ enum HeaderMetrics {
     /// The window toolbar's band at the top of a normal window. Full screen has none, so it is added back there
     /// to keep the sidebar and pages at the same heights in both modes.
     static let windowToolbarBand: CGFloat = 52
+    /// The same band inside the floating sidebar panel (which starts a little below the window's top edge),
+    /// measured against a normal window.
+    static let sidebarToolbarBand: CGFloat = 43
 }
 
 extension View {

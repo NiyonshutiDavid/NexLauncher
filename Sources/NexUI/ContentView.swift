@@ -21,7 +21,6 @@ private struct RootContent: View {
     var body: some View {
         NavigationSplitView {
             SidebarView(model: model)
-                .safeAreaPadding(.top, isFullScreen ? HeaderMetrics.windowToolbarBand : 0)
                 .navigationSplitViewColumnWidth(min: 210, ideal: 240)
                 .toolbar(removing: .sidebarToggle)
         } detail: {

@@ -4,6 +4,7 @@ import NexCore
 struct SidebarView: View {
     @Bindable var model: AppModel
     @Environment(\.theme) private var theme
+    @Environment(\.windowIsFullScreen) private var fullScreen
 
     private func count(_ f: ProjectFilter) -> Int {
         switch f {
@@ -38,6 +39,9 @@ struct SidebarView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Full screen has no window controls above the title; keep the contents where they sit in a window
+            // (spacing inside the panel: padding the column itself breaks the floating glass panel).
+            if fullScreen { Color.clear.frame(height: HeaderMetrics.sidebarToolbarBand) }
             ScrollView {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 8) {
