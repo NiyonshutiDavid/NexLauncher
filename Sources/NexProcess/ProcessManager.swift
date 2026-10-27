@@ -26,12 +26,27 @@ public struct ServiceID: Hashable, Sendable {
     }
 }
 
-/// Spawns `/bin/zsh -lc <command>` in its own session (pgid == pid) with stdout+stderr on one pipe.
+#if os(Linux)
+private typealias SpawnActions = posix_spawn_file_actions_t
+private typealias SpawnAttrs = posix_spawnattr_t
+private let spawnSetSID: Int32 = 0x80          // POSIX_SPAWN_SETSID in glibc, not exported to Swift
+#else
+private typealias SpawnActions = posix_spawn_file_actions_t?
+private typealias SpawnAttrs = posix_spawnattr_t?
+#endif
+
+/// Spawns a login shell running `<command>` in its own session (pgid == pid) with stdout+stderr on one pipe:
+/// `/bin/zsh -lc` on macOS, the user's shell on Linux, through `flatpak-spawn --host` inside a Flatpak.
 public enum ProcessSpawner {
     public static func spawn(command: String, directory: URL, environment: [String: String] = [:]) throws -> (pid: pid_t, fd: Int32) {
+        let invocation = HostCommand.service(command, in: directory, environment: environment)
         var fds: [Int32] = [0, 0]
         guard pipe(&fds) == 0 else { throw POSIXError(.EMFILE) }
-        var actions: posix_spawn_file_actions_t? = nil
+        #if os(Linux)
+        var actions = SpawnActions()
+        #else
+        var actions: SpawnActions = nil
+        #endif
         posix_spawn_file_actions_init(&actions)
         defer { posix_spawn_file_actions_destroy(&actions) }
         posix_spawn_file_actions_addopen(&actions, 0, "/dev/null", O_RDONLY, 0)
@@ -39,28 +54,41 @@ public enum ProcessSpawner {
         posix_spawn_file_actions_adddup2(&actions, fds[1], 2)
         posix_spawn_file_actions_addclose(&actions, fds[0])
         posix_spawn_file_actions_addclose(&actions, fds[1])
+        #if os(Linux)
+        posix_spawn_file_actions_addchdir_np(&actions, directory.path)
+        posix_spawn_file_actions_addclosefrom_np(&actions, 3)    // don't leak the app's other descriptors
+        #else
         if #available(macOS 26, *) {
             posix_spawn_file_actions_addchdir(&actions, directory.path)
         } else {
             posix_spawn_file_actions_addchdir_np(&actions, directory.path)   // same call, named _np before macOS 26
         }
+        #endif
 
-        var attrs: posix_spawnattr_t? = nil
+        #if os(Linux)
+        var attrs = SpawnAttrs()
+        #else
+        var attrs: SpawnAttrs = nil
+        #endif
         posix_spawnattr_init(&attrs)
         defer { posix_spawnattr_destroy(&attrs) }
         // New session (pgid == pid), and don't leak the app's other descriptors (e.g. git's pipes) into the child.
+        #if os(Linux)
+        posix_spawnattr_setflags(&attrs, Int16(spawnSetSID))
+        #else
         posix_spawnattr_setflags(&attrs, Int16(POSIX_SPAWN_SETSID | POSIX_SPAWN_CLOEXEC_DEFAULT))
+        #endif
 
-        let args = ["/bin/zsh", "-lc", command]
+        let args = [invocation.executable] + invocation.arguments
         let cArgs = args.map { strdup($0) } + [nil]
         defer { cArgs.forEach { free($0) } }
         var merged = ProcessInfo.processInfo.environment
-        merged.merge(environment) { $1 }
+        merged.merge(invocation.environment) { $1 }
         var cEnv: [UnsafeMutablePointer<CChar>?] = merged.map { strdup("\($0.key)=\($0.value)") } + [nil]
         defer { cEnv.forEach { free($0) } }
         var pid: pid_t = 0
         let rc = cEnv.withUnsafeMutableBufferPointer { envp in
-            posix_spawn(&pid, "/bin/zsh", &actions, &attrs, cArgs, environment.isEmpty ? environ : envp.baseAddress)
+            posix_spawn(&pid, invocation.executable, &actions, &attrs, cArgs, invocation.environment.isEmpty ? environ : envp.baseAddress)
         }
         close(fds[1])
         guard rc == 0 else {
@@ -86,17 +114,19 @@ public enum ProcessSpawner {
                     lines.append(String(decoding: buffer[buffer.startIndex..<nl], as: UTF8.self))
                     buffer.removeSubrange(buffer.startIndex...nl)
                 }
+                lines = takeHostPGID(from: lines, pid: pid)
                 if !lines.isEmpty { onLines(lines) }
             }
-            if !buffer.isEmpty { onLines([String(decoding: buffer, as: UTF8.self)]) }
+            if !buffer.isEmpty { onLines(takeHostPGID(from: [String(decoding: buffer, as: UTF8.self)], pid: pid)) }
             close(fd)
             done.leave()
         }
         Thread.detachNewThread {
             var status: Int32 = 0
             while waitpid(pid, &status, 0) == -1 && errno == EINTR {}
-            killpg(pid, SIGTERM)
+            signalGroup(pid, SIGTERM)
             _ = done.wait(timeout: .now() + 1)            // let the last lines arrive first
+            forgetHostPGID(pid)
             onExit((status & 0x7f) == 0 ? (status >> 8) & 0xff : 128 + (status & 0x7f))
         }
     }
@@ -104,17 +134,63 @@ public enum ProcessSpawner {
     /// SIGTERM to the whole group, then SIGKILL if anything is still alive after the grace period.
     public static func terminateGroup(_ pid: pid_t, grace: TimeInterval = 3) async {
         guard pid > 0 else { return }
-        killpg(pid, SIGTERM)
+        signalGroup(pid, SIGTERM)
         let deadline = Date().addingTimeInterval(grace)
         while Date() < deadline {
-            if killpg(pid, 0) != 0 { return }
+            if !groupAlive(pid) { return }
             try? await Task.sleep(for: .milliseconds(50))
         }
-        killpg(pid, SIGKILL)
+        signalGroup(pid, SIGKILL)
+    }
+
+    // MARK: - Process groups on the host (Flatpak)
+
+    private static let hostLock = NSLock()
+    nonisolated(unsafe) private static var hostPGIDs: [pid_t: Int32] = [:]
+    /// Runs `flatpak-spawn` with these arguments and returns its exit code (replaced in tests).
+    nonisolated(unsafe) public static var hostRunner: ([String]) -> Int32 = { args in
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: HostCommand.flatpakSpawn)
+        p.arguments = args
+        p.standardOutput = FileHandle.nullDevice
+        p.standardError = FileHandle.nullDevice
+        guard (try? p.run()) != nil else { return -1 }
+        p.waitUntilExit()
+        return p.terminationStatus
+    }
+
+    /// Removes a leading `NEXPGID=<n>` line (printed by the Flatpak host shell) and remembers the group for `pid`.
+    public static func takeHostPGID(from lines: [String], pid: pid_t) -> [String] {
+        guard let first = lines.first, first.hasPrefix("NEXPGID="), let pgid = Int32(first.dropFirst(8)) else { return lines }
+        hostLock.lock(); hostPGIDs[pid] = pgid; hostLock.unlock()
+        return Array(lines.dropFirst())
+    }
+
+    public static func hostPGID(for pid: pid_t) -> Int32? {
+        hostLock.lock(); defer { hostLock.unlock() }
+        return hostPGIDs[pid]
+    }
+
+    static func forgetHostPGID(_ pid: pid_t) {
+        hostLock.lock(); hostPGIDs[pid] = nil; hostLock.unlock()
+    }
+
+    /// Signals the local group and, for a Flatpak service, the host group it started.
+    public static func signalGroup(_ pid: pid_t, _ signal: Int32) {
+        killpg(pid, signal)
+        guard let pgid = hostPGID(for: pid) else { return }
+        let name = signal == SIGKILL ? "-KILL" : signal == 0 ? "-0" : "-TERM"
+        _ = hostRunner(["--host", "kill", name, "--", "-\(pgid)"])
+    }
+
+    /// Whether anything in the group (locally, and on the host for Flatpak services) is still running.
+    public static func groupAlive(_ pid: pid_t) -> Bool {
+        if let pgid = hostPGID(for: pid) { return hostRunner(["--host", "kill", "-0", "--", "-\(pgid)"]) == 0 }
+        return killpg(pid, 0) == 0
     }
 }
 
-/// Owns the dev-server processes. Each service runs under `/bin/zsh -lc` in its own session
+/// Owns the dev-server processes. Each service runs in a login shell in its own session
 /// (so pgid == pid), which lets Stop signal the whole tree.
 @MainActor @Observable
 public final class ProcessManager {
@@ -184,15 +260,19 @@ public final class ProcessManager {
                     lines.append(String(decoding: buffer[buffer.startIndex..<nl], as: UTF8.self))
                     buffer.removeSubrange(buffer.startIndex...nl)
                 }
+                lines = ProcessSpawner.takeHostPGID(from: lines, pid: pid)
                 if !lines.isEmpty { let batch = lines; Task { @MainActor in manager.append(batch, to: id, pid: pid) } }
             }
-            if !buffer.isEmpty { let tail = String(decoding: buffer, as: UTF8.self); Task { @MainActor in manager.append([tail], to: id, pid: pid) } }
+            if !buffer.isEmpty {
+                let tail = ProcessSpawner.takeHostPGID(from: [String(decoding: buffer, as: UTF8.self)], pid: pid)
+                if !tail.isEmpty { Task { @MainActor in manager.append(tail, to: id, pid: pid) } }
+            }
             close(readFD)
         }
         Thread.detachNewThread {
             var status: Int32 = 0
             while waitpid(pid, &status, 0) == -1 && errno == EINTR {}
-            killpg(pid, SIGTERM)          // don't leave stragglers from a shell that has exited
+            ProcessSpawner.signalGroup(pid, SIGTERM)   // don't leave stragglers from a shell that has exited
             Thread.sleep(forTimeInterval: 0.15)   // let the reader drain final lines first
             let code = (status & 0x7f) == 0 ? (status >> 8) & 0xff : 128 + (status & 0x7f)
             Task { @MainActor in manager.handleExit(id, pid: pid, code: code) }
@@ -238,15 +318,15 @@ public final class ProcessManager {
         guard let pid = pids[id] else { return }
         stopRequested.insert(id)
         userStopped.insert(id)
-        killpg(pid, SIGTERM)
+        ProcessSpawner.signalGroup(pid, SIGTERM)
         if id.kind == .docker, let dir = directories[id] { await runShell(dockerStopCommand(dir), timeout: 60) }
         // Done only when the leader is reaped AND nothing is left in its group; otherwise escalate.
         let deadline = Date().addingTimeInterval(killTimeout)
         while Date() < deadline {
-            if pids[id] != pid && killpg(pid, 0) != 0 { return }
+            if pids[id] != pid && !ProcessSpawner.groupAlive(pid) { return }
             try? await Task.sleep(for: .milliseconds(20))
         }
-        killpg(pid, SIGKILL)
+        ProcessSpawner.signalGroup(pid, SIGKILL)
         let reapDeadline = Date().addingTimeInterval(2)
         while pids[id] == pid && Date() < reapDeadline { try? await Task.sleep(for: .milliseconds(20)) }
     }
@@ -258,8 +338,9 @@ public final class ProcessManager {
     private func runShell(_ command: String, timeout: TimeInterval) async {
         await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
             let p = Process()
-            p.executableURL = URL(fileURLWithPath: "/bin/zsh")
-            p.arguments = ["-lc", command]
+            let invocation = HostCommand.service(command, in: URL(fileURLWithPath: NSHomeDirectory()), environment: [:])
+            p.executableURL = URL(fileURLWithPath: invocation.executable)
+            p.arguments = invocation.arguments
             p.standardOutput = FileHandle.nullDevice
             p.standardError = FileHandle.nullDevice
             p.standardInput = FileHandle.nullDevice
