@@ -65,6 +65,10 @@ services, agents or terminals open (`FORCE=1` overrides).
 
 Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## License
+
+[MIT](LICENSE) © 2026 NiyonshutiDavid
+
 ## Notes
 
 - Widgets read `~/Library/Application Support/NexLauncher/widget-snapshot.json` through a read-only sandbox
