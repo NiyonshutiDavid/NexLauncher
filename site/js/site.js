@@ -8,6 +8,17 @@ const REPO = "NiyonshutiDavid/NexLauncher";
 
 // Shown straight away and kept if Supabase can't be reached.
 const FALLBACK_RELEASES = [
+  { version: "3.1.0", title: "Runs on macOS 14 and later, on Apple silicon and Intel", published_at: "2026-10-27T12:00:00Z",
+    download_path: "NexLauncher-3.1.0.zip", size_bytes: 9379369, min_macos: "14.0",
+    files: { arm64: { path: "NexLauncher-3.1.0-arm64.zip", size_bytes: 5422295 }, x86_64: { path: "NexLauncher-3.1.0-x86_64.zip", size_bytes: 5680550 } },
+    summary: "NexLauncher now runs on macOS Sonoma, Sequoia and Tahoe, on any Mac with Apple silicon or an Intel processor.",
+    changes: [
+      { kind: "added", text: "Support for macOS 14 Sonoma and macOS 15 Sequoia, with the standard system look; macOS 26 keeps Liquid Glass." },
+      { kind: "added", text: "Builds for Intel Macs as well as Apple silicon, with a separate download for each." },
+      { kind: "changed", text: "Antigravity runs through its agy command-line tool, and Gemini CLI shows Google's replacement notice." },
+      { kind: "changed", text: "Pop-ups and the full-screen layout match the normal window." },
+      { kind: "fixed", text: "The back button and breadcrumbs now respond to clicks, and the Ask AI panel fits the window." },
+    ] },
   { version: "3.0.0", title: "AI assistant, Flutter devices and tasks", published_at: "2026-10-27T06:00:00Z",
     download_path: "NexLauncher-3.0.0.zip", size_bytes: 5369149, min_macos: "26.0",
     summary: "Hand tasks to AI agents, launch simulators and keep tasks per project.",
@@ -55,7 +66,7 @@ async function api(path, { method = "GET", body } = {}) {
 }
 
 const fetchReleases = () =>
-  api("releases?select=version,title,summary,changes,published_at,download_path,size_bytes,min_macos&order=published_at.desc");
+  api("releases?select=version,title,summary,changes,published_at,download_path,size_bytes,min_macos,files&order=published_at.desc");
 
 const formatDate = (iso) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 const formatSize = (bytes) => (bytes ? `${(bytes / 1e6).toFixed(1)} MB` : "");
@@ -83,33 +94,99 @@ function setupReveal() {
 }
 
 /* ---------- Latest release + download ---------- */
+const releases = new Map(FALLBACK_RELEASES.map((r) => [r.version, r]));
+const hasChipBuilds = (r) => Boolean(r?.files?.arm64 && r?.files?.x86_64);
+
 function showRelease(release) {
   const fileURL = BUCKET_URL + release.download_path;
-  document.querySelectorAll("[data-download]").forEach((a) => { a.href = fileURL; a.dataset.version = release.version; });
+  document.querySelectorAll("[data-download]").forEach((a) => {
+    if (a.closest("[data-changelog]")) return;            // changelog buttons keep their own version
+    a.href = fileURL; a.dataset.version = release.version;
+  });
   document.querySelectorAll("[data-release-version]").forEach((el) => (el.textContent = `Version ${release.version}`));
   document.querySelectorAll("[data-release-date]").forEach((el) => (el.textContent = formatDate(release.published_at)));
-  document.querySelectorAll("[data-release-size]").forEach((el) => (el.textContent = formatSize(release.size_bytes)));
-  document.querySelectorAll("[data-release-macos]").forEach((el) => (el.textContent = `macOS ${release.min_macos ?? "26.0"} or later`));
+  document.querySelectorAll("[data-release-size]").forEach((el) => (el.textContent = hasChipBuilds(release) ? "Apple silicon and Intel" : formatSize(release.size_bytes)));
+  document.querySelectorAll("[data-release-macos]").forEach((el) => (el.textContent = `macOS ${String(release.min_macos ?? "14.0").replace(/\.0$/, "")} or later`));
+}
+
+// Counts the download, then fetches the chip's zip (or the universal one when arch is null).
+async function startDownload(version, arch) {
+  const release = releases.get(version);
+  let path = (arch && release?.files?.[arch]?.path) || release?.download_path;
+  try { path = await api("rpc/record_download", { method: "POST", body: { p_version: version, p_arch: arch } }); }
+  catch { /* still download, just uncounted */ }
+  if (path) window.location.href = BUCKET_URL + path;
+}
+
+// Chrome and Firefox name the GPU (an "Apple M…" chip means Apple silicon). Safari hides it, so no guess there.
+function guessArch() {
+  try {
+    const gl = document.createElement("canvas").getContext("webgl");
+    const info = gl && gl.getExtension("WEBGL_debug_renderer_info");
+    const renderer = info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : "";
+    if (/Apple M\d/i.test(renderer)) return "arm64";
+    if (/Intel|AMD|Radeon|NVIDIA/i.test(renderer)) return "x86_64";
+  } catch { /* no WebGL */ }
+  return null;
+}
+
+let chooser;
+function openChooser(version) {
+  const release = releases.get(version);
+  if (!chooser) {
+    chooser = document.createElement("dialog");
+    chooser.className = "chooser";
+    chooser.setAttribute("aria-labelledby", "chooser-title");
+    document.body.appendChild(chooser);
+    chooser.addEventListener("click", (event) => { if (event.target === chooser) chooser.close(); });   // click outside
+  }
+  const guess = guessArch();
+  const option = (arch, name, detail, icon) => `
+    <button class="choice" data-arch="${arch}" type="button">
+      <i class="ph ${icon}"></i>
+      <span><strong>${name}</strong><span>${detail}, ${formatSize(release.files[arch].size_bytes)}</span></span>
+      ${guess === arch ? '<em class="guess">Likely your Mac</em>' : ""}
+    </button>`;
+  chooser.innerHTML = `
+    <button class="chooser-close" type="button" aria-label="Close"><i class="ph ph-x"></i></button>
+    <h2 id="chooser-title">Which Mac do you have?</h2>
+    <p class="muted">NexLauncher ${escapeHTML(version)} for macOS ${String(release.min_macos ?? "14.0").replace(/\.0$/, "")} or later.</p>
+    <div class="choices">
+      ${option("arm64", "Apple silicon", "M1 and later", "ph-cpu")}
+      ${option("x86_64", "Intel", "Intel Core processors", "ph-desktop")}
+    </div>
+    <p class="hint"><i class="ph ph-info"></i>Not sure? Open the Apple menu, choose About This Mac and look for Chip (Apple silicon) or Processor (Intel).</p>
+    <button class="universal" type="button">Or get the universal version (${formatSize(release.size_bytes)}), which runs on both.</button>`;
+  chooser.querySelector(".chooser-close").addEventListener("click", () => chooser.close());
+  chooser.querySelectorAll(".choice").forEach((b) => b.addEventListener("click", () => { chooser.close(); startDownload(version, b.dataset.arch); }));
+  chooser.querySelector(".universal").addEventListener("click", () => { chooser.close(); startDownload(version, null); });
+  chooser.showModal();
+  (chooser.querySelector(`.choice[data-arch="${guess}"]`) || chooser.querySelector(".choice")).focus();
+}
+
+function bindDownloadButtons() {
+  document.querySelectorAll("[data-download]:not([data-bound])").forEach((a) => {
+    a.dataset.bound = "1";
+    a.addEventListener("click", (event) => {
+      event.preventDefault();
+      const version = a.dataset.version;
+      if (hasChipBuilds(releases.get(version))) openChooser(version);
+      else startDownload(version, null);
+    });
+  });
 }
 
 async function setupDownloads() {
-  const buttons = document.querySelectorAll("[data-download]");
-  if (!buttons.length) return;
+  if (!document.querySelector("[data-download]")) return;
   showRelease(FALLBACK_RELEASES[0]);
+  bindDownloadButtons();
   fetchReleases()
-    .then((list) => { const latest = list.find((r) => r.download_path); if (latest) showRelease(latest); })
-    .catch(() => {});
-  buttons.forEach((a) =>
-    a.addEventListener("click", async (event) => {
-      event.preventDefault();
-      a.setAttribute("aria-busy", "true");
-      let path = a.href.replace(BUCKET_URL, "");
-      try { path = await api("rpc/record_download", { method: "POST", body: { p_version: a.dataset.version } }); }
-      catch { /* still download, just uncounted */ }
-      a.removeAttribute("aria-busy");
-      window.location.href = BUCKET_URL + path;
+    .then((list) => {
+      list.forEach((r) => releases.set(r.version, r));
+      const latest = list.find((r) => r.download_path);
+      if (latest) showRelease(latest);
     })
-  );
+    .catch(() => {});
   const counters = document.querySelectorAll("[data-download-count]");
   if (counters.length) {
     api("rpc/download_count", { method: "POST", body: {} })
@@ -176,7 +253,10 @@ function setupChangelog() {
   const container = document.querySelector("[data-changelog]");
   if (!container) return;
   fetchReleases()
-    .then((list) => { if (list?.length) renderReleases(list, container); else renderReleases(FALLBACK_RELEASES, container); })
+    .then((list) => {
+      list?.forEach((r) => releases.set(r.version, r));
+      renderReleases(list?.length ? list : FALLBACK_RELEASES, container);
+    })
     .catch(() => renderReleases(FALLBACK_RELEASES, container))
     .finally(setupDownloads);
 }
