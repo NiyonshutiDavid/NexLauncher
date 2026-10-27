@@ -14,9 +14,9 @@ struct AppState: Model {
 
     init(app: AppModel) { self.app = app }
 
-    mutating func setup() { observe() }
+    mutating func setup() { MainActor.assumeIsolated { observe() } }
 
-    func observe() {
+    @MainActor func observe() {
         withObservationTracking { app.touchViewState() } onChange: {
             // onChange fires before the new value is stored: re-render on the next main-loop turn.
             MainActor.assumeIsolated {

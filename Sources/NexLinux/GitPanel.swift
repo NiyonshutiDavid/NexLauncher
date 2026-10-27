@@ -13,9 +13,9 @@ struct GitState: Model {
 
     init(git: GitModel) { self.git = git }
 
-    mutating func setup() { observe() }
+    mutating func setup() { MainActor.assumeIsolated { observe() } }
 
-    func observe() {
+    @MainActor func observe() {
         withObservationTracking {
             _ = (git.status, git.branches, git.history, git.identity, git.selectedFile, git.diffText, git.isBusy,
                  git.pendingPullChoice, git.errorMessage, git.summary, git.descriptionText)

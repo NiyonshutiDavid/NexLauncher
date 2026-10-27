@@ -135,9 +135,9 @@ struct OnboardingState: Model {
 
     init(flow: OnboardingModel) { self.flow = flow }
 
-    mutating func setup() { observe() }
+    mutating func setup() { MainActor.assumeIsolated { observe() } }
 
-    func observe() {
+    @MainActor func observe() {
         withObservationTracking {
             _ = (flow.step, flow.name, flow.folder, flow.gitName, flow.gitEmail, flow.isFinishing)
         } onChange: {
