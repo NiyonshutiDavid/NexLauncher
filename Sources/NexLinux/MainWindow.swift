@@ -13,7 +13,7 @@ struct MainWindow: WindowView {
         NavigationSplitView {
             Sidebar(model: state.app)
         } content: {
-            StatusPage("NexLauncher", icon: .default(icon: .folder), description: "\(state.app.projects.count) projects") {}
+            ContentRouter(model: state.app)
         }
         .css { Theme.css }
         .onAppear {
