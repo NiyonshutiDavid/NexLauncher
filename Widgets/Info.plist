@@ -7,8 +7,8 @@
     <key>CFBundleDisplayName</key><string>NexLauncher Widgets</string>
     <key>CFBundleExecutable</key><string>NexWidgets</string>
     <key>CFBundlePackageType</key><string>XPC!</string>
-    <key>CFBundleShortVersionString</key><string>3.1.0</string>
-    <key>CFBundleVersion</key><string>4</string>
+    <key>CFBundleShortVersionString</key><string>4.0.0</string>
+    <key>CFBundleVersion</key><string>5</string>
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>NSExtension</key>
     <dict>

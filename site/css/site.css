@@ -369,6 +369,9 @@ td code { white-space: normal; overflow-wrap: anywhere; }
 }
 .chooser-close:hover { color: var(--fg); }
 .choices { display: grid; gap: 10px; margin-top: 22px; }
+.choices-title { display: flex; align-items: center; gap: 8px; margin-top: 22px; font-size: 14px; font-weight: 650; letter-spacing: 0.02em; color: var(--fg-2); }
+.choices-title + .choices { margin-top: 10px; }
+.hint code { font-size: 13px; padding: 1px 6px; border-radius: 6px; background: var(--surface-2); }
 .choice {
   position: relative; display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; cursor: pointer;
   font: inherit; color: var(--fg); background: var(--canvas); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px;
