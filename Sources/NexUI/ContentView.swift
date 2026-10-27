@@ -38,18 +38,36 @@ private struct RootContent: View {
         // the toolbar is hidden and the page draws them.
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .environment(\.windowIsFullScreen, isFullScreen)
+        .environment(\.modalIsOpen, modalKey != nil)
         .background(WindowStyler(isFullScreen: $isFullScreen))
         .overlay {
             if model.showOnboarding { OnboardingView(model: model).transition(.opacity) }
         }
         .animation(.easeInOut(duration: 0.3), value: model.showOnboarding)
-        .sheet(item: $model.sheet) { sheet in
-            switch sheet {
-            case .addProject(let mode): AddProjectSheet(model: model, initialMode: mode)
-            case .widgetsHowTo: WidgetsHowToSheet(model: model)
+        .overlay {
+            ZStack {
+                if let session = model.setup {
+                    ModalLayer(onClose: {}) { SetupSheet(model: model, session: session) }   // closes through its own buttons
+                } else if let sheet = model.sheet {
+                    ModalLayer(onClose: { model.sheet = nil }) {
+                        switch sheet {
+                        case .addProject(let mode): AddProjectSheet(model: model, initialMode: mode)
+                        case .widgetsHowTo: WidgetsHowToSheet(model: model)
+                        }
+                    }
+                } else if let modal = model.modal {
+                    ModalLayer(onClose: { model.modal = nil }) { modal.view }
+                }
             }
+            .animation(.spring(duration: 0.35), value: modalKey)
         }
-        .sheet(item: $model.setup) { session in SetupSheet(model: model, session: session) }
+    }
+
+    /// Which pop-up is showing, if any.
+    private var modalKey: String? {
+        if let setup = model.setup { return "setup-\(setup.id)" }
+        if let sheet = model.sheet { return sheet.id }
+        return model.modal.map { "modal-\($0.id)" }
     }
 
     /// Changes when the page (or the sidebar section) changes, so the detail fades and slides in.

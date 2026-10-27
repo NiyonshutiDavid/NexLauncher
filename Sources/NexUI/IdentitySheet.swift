@@ -4,7 +4,7 @@ import NexGit
 struct IdentitySheet: View {
     let current: GitIdentity
     let onSave: (GitIdentity, GitScope) -> Void
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.closeModal) private var dismiss
     @State private var name = ""
     @State private var email = ""
     @State private var scope: GitScope = .global

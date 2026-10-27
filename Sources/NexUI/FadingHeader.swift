@@ -11,9 +11,6 @@ enum HeaderMetrics {
     /// The window toolbar's band at the top of a normal window. Full screen has none, so it is added back there
     /// to keep the sidebar and pages at the same heights in both modes.
     static let windowToolbarBand: CGFloat = 52
-    /// The same band inside the floating sidebar panel (which starts a little below the window's top edge),
-    /// measured against a normal window.
-    static let sidebarToolbarBand: CGFloat = 43
 }
 
 extension View {
@@ -51,9 +48,13 @@ private struct HeaderTitle: View {
 private struct FadingHeaderModifier<Center: View, Leading: View, Trailing: View>: ViewModifier {
     @Environment(\.theme) private var theme
     @Environment(\.windowIsFullScreen) private var fullScreen
+    @Environment(\.modalIsOpen) private var modalOpen
     let center: Center
     let leading: Leading
     let trailing: Trailing
+
+    /// Full screen (toolbar only on hover) or under a pop-up's dimming: the page draws the controls itself.
+    private var inPage: Bool { fullScreen || modalOpen }
 
     func body(content: Content) -> some View {
         content
@@ -67,7 +68,7 @@ private struct FadingHeaderModifier<Center: View, Leading: View, Trailing: View>
                                    startPoint: .top, endPoint: .bottom)
                         .frame(height: HeaderMetrics.height + 34)
                         .allowsHitTesting(false)
-                    if fullScreen {
+                    if inPage {
                         // Full screen: the toolbar only appears on hover (on macOS's opaque bar), so the
                         // controls are drawn here instead.
                         ZStack {
@@ -87,7 +88,7 @@ private struct FadingHeaderModifier<Center: View, Leading: View, Trailing: View>
             // In a window the controls live in the (transparent) toolbar: it sits over this strip and would
             // otherwise take every click meant for buttons drawn underneath it.
             .toolbar {
-                if !fullScreen {
+                if !inPage {
                     ToolbarItemGroup(placement: .navigation) { leading }
                         .sharedBackgroundVisibility(.hidden)
                     ToolbarItem(placement: .principal) { center }

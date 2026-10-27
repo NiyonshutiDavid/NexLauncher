@@ -5,7 +5,7 @@ import NexGit
 
 struct AddProjectSheet: View {
     @Bindable var model: AppModel
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.closeModal) private var dismiss
     @Environment(\.theme) private var theme
     @State private var mode: AddProjectMode
     @State private var folderForm = NewFolderForm()
@@ -122,7 +122,7 @@ struct AddProjectSheet: View {
 
 struct WidgetsHowToSheet: View {
     @Bindable var model: AppModel
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.closeModal) private var dismiss
     @Environment(\.theme) private var theme
 
     var body: some View {

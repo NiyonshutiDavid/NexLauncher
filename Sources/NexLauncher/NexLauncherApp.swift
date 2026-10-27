@@ -10,7 +10,7 @@ struct NexLauncherApp: App {
     @Environment(\.openWindow) private var openWindow
 
     /// Developer option for screenshots: `open NexLauncher.app --args -NexStartPage ai|tasks|flutter|running|pinned|settings`,
-    /// or `project:<name>` / `project-ai:<name>` (after the scan) for a project page, optionally with its AI panel open.
+    /// `add-project` / `widgets-how-to` (sheets), or `project:<name>` / `project-ai:<name>` (after the scan) for a project page, optionally with its AI panel open.
     private func openStartPage() {
         switch UserDefaults.standard.string(forKey: "NexStartPage") {
         case "ai": model.page = .ai
@@ -19,6 +19,8 @@ struct NexLauncherApp: App {
         case "flutter": model.select(filter: .flutter)
         case "running": model.select(filter: .running)
         case "pinned": model.select(filter: .pinned)
+        case "add-project": model.sheet = .addProject(.newFolder)
+        case "widgets-how-to": model.sheet = .widgetsHowTo
         case let value? where value.hasPrefix("project"):
             let name = value.split(separator: ":", maxSplits: 1).last.map(String.init) ?? ""
             guard let project = model.projects.first(where: { $0.name == name }) else { return }

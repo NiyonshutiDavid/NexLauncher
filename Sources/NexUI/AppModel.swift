@@ -37,6 +37,8 @@ public final class AppModel {
     public var filter: ProjectFilter = .all
     /// The filter panel (type, framework, git, running, pinned, collections).
     public var filters = ProjectFilterSet()
+    /// Any other pop-up shown over the window (see `ModalLayer`).
+    public var modal: ModalContent?
     /// The project whose AI side panel is open.
     public var aiPanelProjectID: String?
     public private(set) var gitBadges: [String: GitBadge] = [:]

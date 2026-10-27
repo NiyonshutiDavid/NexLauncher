@@ -37,7 +37,6 @@ private struct RepoView: View {
     let model: AppModel
     @State private var git: GitModel
     @State private var tab = 0
-    @State private var showIdentity = false
     @State private var newBranch = ""
     @State private var showNewBranch = false
     @State private var discardTarget: FileChange?
@@ -69,7 +68,7 @@ private struct RepoView: View {
                     Image(systemName: "person.crop.circle.badge.exclamationmark")
                     Text("Set your name and email before committing.")
                     Spacer()
-                    Button("Set up") { showIdentity = true }.buttonStyle(.glassProminent)
+                    Button("Set up") { showIdentityForm() }.buttonStyle(.glassProminent)
                 }
                 .padding(12)
                 .glassEffect(.regular, in: .rect(cornerRadius: 14))
@@ -79,9 +78,6 @@ private struct RepoView: View {
             if tab == 0 { changes } else { historyList }
         }
         .task { await git.reload() }
-        .sheet(isPresented: $showIdentity) {
-            IdentitySheet(current: git.identity) { id, scope in Task { await git.saveIdentity(id, scope: scope) } }
-        }
         .alert("New branch", isPresented: $showNewBranch) {
             TextField("Branch name", text: $newBranch)
             Button("Create") { let n = newBranch; newBranch = ""; Task { await git.createBranch(n) } }
@@ -91,6 +87,11 @@ private struct RepoView: View {
             get: { discardTarget != nil }, set: { if !$0 { discardTarget = nil } }), presenting: discardTarget) { file in
             Button("Discard changes", role: .destructive) { Task { await git.discard(file) } }
         } message: { _ in Text("This can't be undone.") }
+    }
+
+    private func showIdentityForm() {
+        let git = git
+        model.modal = ModalContent(IdentitySheet(current: git.identity) { id, scope in Task { await git.saveIdentity(id, scope: scope) } })
     }
 
     // MARK: - Pieces
@@ -115,7 +116,7 @@ private struct RepoView: View {
             Button { Task { await git.fetch() } } label: { Label("Fetch", systemImage: "arrow.clockwise") }.buttonStyle(.glass)
             Button { Task { await git.pull(strategy: model.settings.settings.defaultPullStrategy.strategy) } } label: { Label("Pull", systemImage: "arrow.down.circle") }.buttonStyle(.glass)
             Button { Task { await git.push() } } label: { Label("Push", systemImage: "arrow.up.circle") }.buttonStyle(.glassProminent)
-            Button { showIdentity = true } label: { Image(systemName: "person.crop.circle") }.buttonStyle(.glass).help("Git name and email")
+            Button { showIdentityForm() } label: { Image(systemName: "person.crop.circle") }.buttonStyle(.glass).help("Git name and email")
         }
         .disabled(git.isBusy)
     }
