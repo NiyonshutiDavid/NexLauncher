@@ -41,7 +41,8 @@ struct TasksPage: View {
             .padding(32)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .fadingHeader(title: "Tasks") { HeaderBackButton { model.page = .home } }
+        .fadingHeader(crumbs: [Crumb(title: "Projects", page: .home), Crumb(title: "Tasks", page: nil)],
+                      onSelect: { model.page = $0 }, onBack: { model.page = .home })
     }
 }
 

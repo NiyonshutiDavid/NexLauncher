@@ -19,14 +19,18 @@ extension View {
         modifier(FadingHeaderModifier(center: HeaderTitle(title: title), leading: leading(), trailing: trailing()))
     }
 
-    /// The same header with a clickable breadcrumb in the middle instead of a title.
-    func fadingHeader<Leading: View, Trailing: View>(
+    /// The same header with a back button and a clickable breadcrumb in the middle instead of a title. They
+    /// share the centre item: a leading toolbar item would jump over an open inspector.
+    func fadingHeader<Trailing: View>(
         crumbs: [Crumb],
         onSelect: @escaping (AppPage) -> Void,
-        @ViewBuilder leading: () -> Leading = { EmptyView() },
+        onBack: @escaping () -> Void,
         @ViewBuilder trailing: () -> Trailing = { EmptyView() }
     ) -> some View {
-        modifier(FadingHeaderModifier(center: BreadcrumbBar(crumbs: crumbs, onSelect: onSelect), leading: leading(), trailing: trailing()))
+        modifier(FadingHeaderModifier(center: HStack(spacing: 10) {
+            HeaderBackButton(action: onBack)
+            BreadcrumbBar(crumbs: crumbs, onSelect: onSelect)
+        }, leading: EmptyView(), trailing: trailing()))
     }
 }
 

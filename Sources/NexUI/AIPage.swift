@@ -48,7 +48,8 @@ struct AIPage: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .animation(.spring(duration: 0.4), value: model.agentRuns.map(\.id))
-        .fadingHeader(title: "AI Assistant") { HeaderBackButton { model.page = .home } }
+        .fadingHeader(crumbs: [Crumb(title: "Projects", page: .home), Crumb(title: "AI Assistant", page: nil)],
+                      onSelect: { model.page = $0 }, onBack: { model.page = .home })
         .onAppear {
             agent = model.settings.settings.defaultAgent
             autonomy = model.settings.settings.agentAutonomy

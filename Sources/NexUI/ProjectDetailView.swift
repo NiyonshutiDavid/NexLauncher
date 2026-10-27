@@ -29,9 +29,7 @@ struct ProjectDetailView: View {
         }
         .frame(minWidth: 0)
         // Run and Ask AI sit under the title; trailing toolbar items would move over the AI panel when it opens.
-        .fadingHeader(crumbs: crumbs, onSelect: { model.page = $0 }) {
-            HeaderBackButton { model.goBack() }
-        }
+        .fadingHeader(crumbs: crumbs, onSelect: { model.page = $0 }, onBack: { model.goBack() })
         .inspector(isPresented: aiPanelBinding) {
             if let project {
                 ProjectAIPanel(model: model, project: project)

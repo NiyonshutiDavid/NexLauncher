@@ -79,7 +79,8 @@ struct SettingsPage: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .fadingHeader(title: "Settings") { HeaderBackButton { model.page = .home } }
+        .fadingHeader(crumbs: [Crumb(title: "Projects", page: .home), Crumb(title: "Settings", page: nil)],
+                      onSelect: { model.page = $0 }, onBack: { model.page = .home })
         .onChange(of: section) { _, new in selected = new }
     }
 }
