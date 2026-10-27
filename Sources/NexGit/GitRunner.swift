@@ -104,9 +104,10 @@ public struct GitRunner: Sendable {
                 if d.isEmpty { h.readabilityHandler = nil; state.errDrained() } else { state.appendErr(d) }
             }
             DispatchQueue.global().asyncAfter(deadline: .now() + timeout) {
-                // Fires even if git already exited but a child still holds the pipe open.
-                git.terminate()
+                // Fires even if git already exited but a child still holds the pipe open. The timeout is
+                // recorded first: once git is stopped it can exit (and finish the call) at any moment.
                 state.fail(GitError.timeout)
+                git.terminate()
             }
         }
     }
