@@ -114,3 +114,32 @@ struct AddProjectDialogContent: View {
         }
     }
 }
+
+/// Asks before quitting would interrupt something; "Stop and Quit" stops it all, then closes the window again.
+struct QuitDialogContent: View {
+    let model: AppModel
+    let close: () -> Void
+    @State private var stopping = false
+
+    var view: Body {
+        VStack(spacing: 16) {
+            Text(model.pendingQuitSummary ?? "").wrap(true).style("title-4").halign(.start)
+            Text("Quitting stops everything NexLauncher started.").wrap(true).style("dim-label").halign(.start)
+            HStack(spacing: 8) {
+                Button("Cancel") { model.pendingQuitSummary = nil }.pill()
+                Button(stopping ? "Stopping…" : "Stop and Quit") {
+                    guard !stopping else { return }
+                    stopping = true
+                    Task {
+                        await model.stopEverything()
+                        model.pendingQuitSummary = nil
+                        close()
+                    }
+                }
+                .destructive().pill()
+            }
+            .halign(.end)
+        }
+        .padding(24)
+    }
+}

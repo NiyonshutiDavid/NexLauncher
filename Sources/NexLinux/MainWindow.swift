@@ -31,12 +31,18 @@ struct MainWindow: WindowView {
                 title: "Welcome", width: 560, height: 460) {
             OnboardingContent(model: state.app)
         }
+        .dialog(visible: Binding(get: { state.app.pendingQuitSummary != nil }, set: { if !$0 { state.app.pendingQuitSummary = nil } }),
+                title: "Quit NexLauncher?", width: 420, height: 220) {
+            QuitDialogContent(model: state.app) { window.close() }
+        }
         .css { Theme.css }
         .onAppear {
             guard !scanned else { return }
             scanned = true
             Shared.terminals.onChange = { state.setModel { $0.tick &+= 1 } }
             Shared.services.presentMainWindow = { gtk_window_present(window.pointer?.cast()); return true }
+            // Notifications are only posted while the window isn't focused (unless the user turns that off).
+            Shared.services.windowIsActive = { gtk_window_is_active(window.pointer?.cast()) != 0 }
             Task {
                 // Tools from nvm, pyenv, asdf… are only on the interactive shell's PATH: read it once first.
                 HostCommand.setUserEnvironment(await ShellEnvironment.capture(shell: HostCommand.defaultShell,

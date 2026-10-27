@@ -146,19 +146,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        let services = model.processes.runningCount
-        let terminalBusy = model.terminals.hasRunningPrograms
-        let agents = model.runningAgentCount
-        guard services > 0 || terminalBusy || agents > 0 else {
+        guard let summary = model.quitSummary else {
             model.terminals.closeAll()
             return .terminateNow
         }
         let alert = NSAlert()
-        var parts: [String] = []
-        if services > 0 { parts.append("\(services) service\(services == 1 ? "" : "s") still running") }
-        if terminalBusy { parts.append("a program is still running in a terminal") }
-        if agents > 0 { parts.append("\(agents) AI agent\(agents == 1 ? " is" : "s are") still working") }
-        alert.messageText = parts.joined(separator: " and ").prefix(1).uppercased() + parts.joined(separator: " and ").dropFirst()
+        alert.messageText = summary
         alert.informativeText = "Quit and stop everything, or keep running from the menu bar."
         alert.addButton(withTitle: "Stop and Quit")
         alert.addButton(withTitle: "Keep Running in Menu Bar")
@@ -166,9 +159,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         switch alert.runModal() {
         case .alertFirstButtonReturn:
             Task {
-                await model.stopAllServices()
-                await model.stopAllAgents()                  // never leave an agent editing files unsupervised
-                model.terminals.closeAll()
+                await model.stopEverything()
                 sender.reply(toApplicationShouldTerminate: true)
             }
             return .terminateLater

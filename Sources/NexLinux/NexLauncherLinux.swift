@@ -22,5 +22,18 @@ struct NexLauncherLinux: App {
         }
         .defaultSize(width: 1200, height: 800)
         .title("NexLauncher")
+        .onClose {
+            // Closing the window quits the app. If that would interrupt services, agents or a terminal program,
+            // keep the window and ask first (MainWindow shows the question); otherwise close the terminals and go.
+            MainActor.assumeIsolated {
+                let model = Shared.model
+                guard let summary = model.quitSummary else {
+                    model.terminals.closeAll()
+                    return .close
+                }
+                model.pendingQuitSummary = summary
+                return .cancel
+            }
+        }
     }
 }

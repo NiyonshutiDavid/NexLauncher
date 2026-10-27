@@ -44,6 +44,8 @@ public final class AppModel {
     public var setup: SetupSession?
     public var page: AppPage = .home
     public var sheet: AppSheet?
+    /// Set while the Linux window asks whether to stop what's running and quit (see `quitSummary`).
+    public var pendingQuitSummary: String?
     public var showOnlyUncommitted = false
     /// A short result line for quick actions (shown in the menu bar popover); clears itself.
     public var statusMessage: StatusMessage?

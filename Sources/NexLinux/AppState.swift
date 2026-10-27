@@ -34,7 +34,7 @@ extension AppModel {
     func touchViewState() {
         _ = (projects, tree, isScanning, searchText, filter, filters, aiPanelProjectID, gitBadges, page, sheet,
              showOnlyUncommitted, statusMessage, gitBusy, detailTab, refreshToken, tasks, agentDraft, agentError,
-             setup, pendingInstall, settings.settings, processes.states, processes.logs)
+             setup, pendingInstall, settings.settings, processes.states, processes.logs, pendingQuitSummary)
         for run in agentRuns { _ = (run.events, run.status) }
         _ = (devices.avds, devices.connected, devices.isLoading, devices.busy)
     }
