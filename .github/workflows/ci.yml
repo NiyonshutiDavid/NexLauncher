@@ -50,9 +50,12 @@ jobs:
       - name: Build dependencies (VTE)
         run: flatpak-builder --user --force-clean --disable-rofiles-fuse --stop-at=nexlauncher build linux/net.nexventures.NexLauncher.yml
       - name: Build and test NexLinux
+        # Built in /app/src (the build directory the sandbox owns); the checkout itself isn't writable in there.
         run: |
-          flatpak build --share=network --filesystem="$GITHUB_WORKSPACE" \
+          mkdir -p build/files/src
+          cp -a Package.swift Package.resolved Sources Tests build/files/src/
+          flatpak build --share=network \
             --env=PATH=/usr/lib/sdk/swift6/bin:/app/bin:/usr/bin \
             --env=LD_LIBRARY_PATH=/usr/lib/sdk/swift6/lib:/app/lib \
             --env=PKG_CONFIG_PATH=/app/lib/pkgconfig:/app/share/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig \
-            build sh -c "cd '$GITHUB_WORKSPACE' && swift --version && swift build --build-tests && swift test --filter NexLinuxTests"
+            build sh -c "cd /app/src && swift --version && swift build --build-tests && swift test --filter NexLinuxTests"
