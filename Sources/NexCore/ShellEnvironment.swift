@@ -46,7 +46,8 @@ public enum ShellEnvironment {
         guard let child = try? PipedSpawn.start(inv, in: AppSettings.realHome, mergeStderr: false) else { return nil }
         let exited = ExitWatch()
         PipedSpawn.onExit(child.pid) { _ in exited.set() }
-        if let err = child.stderr { close(err) }
+        // stderr stays open until the end: an interactive shell without a terminal warns there ("no job
+        // control"), and writing to a closed pipe would kill it.
         let fd = child.stdout
         let stop = { if !exited.isSet { kill(child.pid, SIGKILL) } }
         let isRunning = { !exited.isSet }
@@ -74,6 +75,7 @@ public enum ShellEnvironment {
             let ready = poll(&pfd, 1, 100)
             if ready > 0 {
                 let n = read(fd, &buffer, buffer.count)
+                if n < 0 && errno == EINTR { continue }
                 if n <= 0 { break }
                 data.append(contentsOf: buffer[0..<n])
             } else if ready == 0, !isRunning(), data.last == 0 {
@@ -83,6 +85,7 @@ public enum ShellEnvironment {
         stop()
         #if os(Linux)
         close(fd)
+        if let err = child.stderr { close(err) }
         #endif
         return data
     }
