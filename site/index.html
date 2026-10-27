@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NexLauncher: run every project from one Mac app</title>
+  <meta name="description" content="NexLauncher finds the apps in your projects folder and runs them, with git, a terminal and AI agents built in. Free for macOS 26.">
+  <meta property="og:title" content="NexLauncher">
+  <meta property="og:description" content="Run every project in one click. A native macOS app with git, a terminal and AI agents built in.">
+  <meta property="og:image" content="https://niyonshutidavid.github.io/NexLauncher/assets/shots/home-light-1224.webp">
+  <meta name="theme-color" content="#f7f8fa" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#07080c" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="assets/favicon.png">
+  <link rel="preload" as="image" href="assets/shots/home-light-1224.webp" media="(prefers-color-scheme: light)">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+  <link rel="stylesheet" href="css/site.css?v=2">
+  <script src="js/site.js?v=2" defer></script>
+</head>
+<body>
+  <header class="nav">
+    <div class="wrap">
+      <a class="brand" href="./"><img src="assets/icon.webp" alt="" width="34" height="34">NexLauncher</a>
+      <button class="nav-toggle" aria-label="Menu" aria-expanded="false" aria-controls="nav-links"><i class="ph ph-list"></i></button>
+      <nav class="nav-links" id="nav-links">
+        <a href="how-it-works.html">How it works</a>
+        <a href="changelog.html">Changelog</a>
+        <a href="contribute.html">Contribute</a>
+        <a href="https://github.com/NiyonshutiDavid/NexLauncher" rel="noopener">GitHub</a>
+        <a class="btn btn-primary btn-sm" data-download href="https://yrtrfuwykdxuppvlgprd.supabase.co/storage/v1/object/public/releases/NexLauncher-3.0.0.zip" data-version="3.0.0"><i class="ph-fill ph-apple-logo"></i>Download for Mac</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <h1>Run every project in one click.</h1>
+          <p class="lede">NexLauncher finds the apps in your projects folder and runs them, with git, a terminal and AI agents built in.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" data-download href="https://yrtrfuwykdxuppvlgprd.supabase.co/storage/v1/object/public/releases/NexLauncher-3.0.0.zip" data-version="3.0.0"><i class="ph-fill ph-apple-logo"></i>Download for Mac</a>
+            <a class="btn btn-ghost" href="https://github.com/NiyonshutiDavid/NexLauncher" rel="noopener"><i class="ph ph-github-logo"></i>View on GitHub</a>
+          </div>
+        </div>
+        <div class="hero-media">
+          <div class="hero-glow" aria-hidden="true"></div>
+          <picture>
+            <source media="(prefers-color-scheme: dark)" srcset="assets/shots/home-dark-1224.webp 1224w, assets/shots/home-dark.webp 2448w" sizes="(max-width: 900px) 100vw, 980px">
+            <img class="shot" src="assets/shots/home-light.webp" srcset="assets/shots/home-light-1224.webp 1224w, assets/shots/home-light.webp 2448w" sizes="(max-width: 900px) 100vw, 980px" width="2448" height="1630" alt="NexLauncher's home: a greeting, tips, pinned projects and a grid of project cards, each with a Run button.">
+          </picture>
+        </div>
+      </div>
+    </section>
+
+    <section class="stacks" aria-labelledby="stacks-title">
+      <p id="stacks-title">Reads the manifest, not the folder name. These and more run out of the box.</p>
+      <div class="marquee">
+        <div class="marquee-track">
+          <img src="https://cdn.simpleicons.org/react/5b6170/aeb4c2" alt="React" width="30" height="30">
+          <img src="https://cdn.simpleicons.org/nextdotjs/5b6170/aeb4c2" alt="Next.js" width="30" height="30">
+          <img src="https://cdn.simpleicons.org/vite/5b6170/aeb4c2" alt="Vite" width="30" height="30">
+          <img src="https://cdn.simpleicons.org/vuedotjs/5b6170/aeb4c2" alt="Vue" width="30" height="30">
+          <img src="https://cdn.simpleicons.org/astro/5b6170/aeb4c2" alt="Astro" width="30" height="30">
+          <img src="https://cdn.simpleicons.org/expo/5b6170/aeb4c2" alt="Expo" width="30" height="30">
+          <img src="https://cdn.simpleicons.org/deno/5b6170/aeb4c2" alt="Deno" width="30" height="30">
+          <img src="https://cdn.simpleicons.org/django/5b6170/aeb4c2" alt="Django" width="30" height="30">
+          <img src="https://cdn.simpleicons.org/fastapi/5b6170/aeb4c2" alt="FastAPI" width="30" height="30">
+          <img src="https://cdn.simpleicons.org/python/5b6170/aeb4c2" alt="Python" width="30" height="30">
+          <img src="https://cdn.simpleicons.org/flutter/5b6170/aeb4c2" alt="Flutter" width="30" height="30">
+          <img src="https://cdn.simpleicons.org/go/5b6170/aeb4c2" alt="Go" width="30" height="30">
+          <img src="https://cdn.simpleicons.org/rust/5b6170/aeb4c2" alt="Rust" width="30" height="30">
+          <img src="https://cdn.simpleicons.org/rubyonrails/5b6170/aeb4c2" alt="Ruby on Rails" width="30" height="30">
+          <img src="https://cdn.simpleicons.org/laravel/5b6170/aeb4c2" alt="Laravel" width="30" height="30">
+          <img src="https://cdn.simpleicons.org/dotnet/5b6170/aeb4c2" alt=".NET" width="30" height="30">
+          <img src="https://cdn.simpleicons.org/elixir/5b6170/aeb4c2" alt="Elixir" width="30" height="30">
+          <img src="https://cdn.simpleicons.org/swift/5b6170/aeb4c2" alt="Swift" width="30" height="30">
+          <img src="https://cdn.simpleicons.org/docker/5b6170/aeb4c2" alt="Docker" width="30" height="30">
+          <!-- second copy for a seamless loop -->
+          <img aria-hidden="true" src="https://cdn.simpleicons.org/react/5b6170/aeb4c2" alt="" width="30" height="30">
+          <img aria-hidden="true" src="https://cdn.simpleicons.org/nextdotjs/5b6170/aeb4c2" alt="" width="30" height="30">
+          <img aria-hidden="true" src="https://cdn.simpleicons.org/vite/5b6170/aeb4c2" alt="" width="30" height="30">
+          <img aria-hidden="true" src="https://cdn.simpleicons.org/vuedotjs/5b6170/aeb4c2" alt="" width="30" height="30">
+          <img aria-hidden="true" src="https://cdn.simpleicons.org/astro/5b6170/aeb4c2" alt="" width="30" height="30">
+          <img aria-hidden="true" src="https://cdn.simpleicons.org/expo/5b6170/aeb4c2" alt="" width="30" height="30">
+          <img aria-hidden="true" src="https://cdn.simpleicons.org/deno/5b6170/aeb4c2" alt="" width="30" height="30">
+          <img aria-hidden="true" src="https://cdn.simpleicons.org/django/5b6170/aeb4c2" alt="" width="30" height="30">
+          <img aria-hidden="true" src="https://cdn.simpleicons.org/fastapi/5b6170/aeb4c2" alt="" width="30" height="30">
+          <img aria-hidden="true" src="https://cdn.simpleicons.org/python/5b6170/aeb4c2" alt="" width="30" height="30">
+          <img aria-hidden="true" src="https://cdn.simpleicons.org/flutter/5b6170/aeb4c2" alt="" width="30" height="30">
+          <img aria-hidden="true" src="https://cdn.simpleicons.org/go/5b6170/aeb4c2" alt="" width="30" height="30">
+          <img aria-hidden="true" src="https://cdn.simpleicons.org/rust/5b6170/aeb4c2" alt="" width="30" height="30">
+          <img aria-hidden="true" src="https://cdn.simpleicons.org/rubyonrails/5b6170/aeb4c2" alt="" width="30" height="30">
+          <img aria-hidden="true" src="https://cdn.simpleicons.org/laravel/5b6170/aeb4c2" alt="" width="30" height="30">
+          <img aria-hidden="true" src="https://cdn.simpleicons.org/dotnet/5b6170/aeb4c2" alt="" width="30" height="30">
+          <img aria-hidden="true" src="https://cdn.simpleicons.org/elixir/5b6170/aeb4c2" alt="" width="30" height="30">
+          <img aria-hidden="true" src="https://cdn.simpleicons.org/swift/5b6170/aeb4c2" alt="" width="30" height="30">
+          <img aria-hidden="true" src="https://cdn.simpleicons.org/docker/5b6170/aeb4c2" alt="" width="30" height="30">
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="features">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <h2>Everything a project needs, in one window.</h2>
+          <p class="lede">Open a project and it's ready: run it, read its logs, commit, open a terminal or hand a task to an agent.</p>
+        </div>
+        <div class="bento">
+          <article class="tile tile-a reveal">
+            <h3>One click to run</h3>
+            <p>Frontend, backend or both, Flutter, Docker or the app itself. Live logs and ports, and a setup step when dependencies are missing.</p>
+            <div class="tile-shot">
+              <picture>
+                <source media="(prefers-color-scheme: dark)" srcset="assets/shots/project-dark-1224.webp">
+                <img src="assets/shots/project-light-1224.webp" width="1224" height="815" loading="lazy" alt="A project page for orbit, a Next.js and Django app, with Run Both, Overview, Tasks, Terminal, Logs, Git and Files.">
+              </picture>
+            </div>
+          </article>
+          <article class="tile tile-b reveal" style="--delay: .08s">
+            <h3>Git without leaving the app</h3>
+            <p>Set your name, stage, commit, pull and push, switch branches and read history. It uses the credentials you already have.</p>
+            <picture class="illo float">
+              <source media="(prefers-color-scheme: dark)" srcset="assets/illus/branchGraph-dark.webp">
+              <img src="assets/illus/branchGraph-light.webp" alt="" width="168" height="168" loading="lazy">
+            </picture>
+          </article>
+          <article class="tile tile-c reveal">
+            <h3>Simulators and emulators</h3>
+            <p>Launch an iOS simulator or an Android emulator, then run your Flutter app on it.</p>
+            <div class="tile-shot">
+              <picture>
+                <source media="(prefers-color-scheme: dark)" srcset="assets/shots/flutter-dark-1224.webp">
+                <img src="assets/shots/flutter-light-1224.webp" width="1224" height="815" loading="lazy" alt="The Flutter page with iOS simulators, Android emulators and devices ready to run.">
+              </picture>
+            </div>
+          </article>
+          <article class="tile tile-d reveal" style="--delay: .08s">
+            <h3>A terminal anywhere</h3>
+            <p>Open a real shell in any project or folder, in a tab of its own.</p>
+            <picture class="illo">
+              <source media="(prefers-color-scheme: dark)" srcset="assets/illus/terminal-dark.webp">
+              <img src="assets/illus/terminal-light.webp" alt="" width="132" height="132" loading="lazy">
+            </picture>
+          </article>
+          <article class="tile tile-e reveal" style="--delay: .16s">
+            <h3>Menu bar and widgets</h3>
+            <p>Running services, pinned projects and open tasks without opening the app. Press <kbd>⌃⌥⌘L</kbd> from anywhere.</p>
+            <picture class="illo float">
+              <source media="(prefers-color-scheme: dark)" srcset="assets/illus/widgets-dark.webp">
+              <img src="assets/illus/widgets-light.webp" alt="" width="132" height="132" loading="lazy">
+            </picture>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="ai" style="padding-top: 0">
+      <div class="wrap split">
+        <div class="reveal">
+          <h2>Hand a task to an AI agent, right from the project.</h2>
+          <p class="lede" style="margin-top: 18px">Ask AI opens beside the project you're in. Describe the job, pick how much the agent may do on its own and follow its progress as it works.</p>
+          <div class="agents">
+            <div class="agent"><i class="ph ph-asterisk"></i><div>Claude Code<span>claude</span></div></div>
+            <div class="agent"><i class="ph ph-code"></i><div>Codex<span>codex exec</span></div></div>
+            <div class="agent"><i class="ph ph-atom"></i><div>Antigravity<span>agy</span></div></div>
+            <div class="agent"><i class="ph ph-sparkle"></i><div>Gemini CLI<span>gemini</span></div></div>
+          </div>
+          <p class="note"><i class="ph ph-lock-simple"></i>Each agent signs in with its own tool. NexLauncher never sees or stores your keys. Any other command-line agent works too.</p>
+        </div>
+        <div class="reveal" style="--delay: .1s">
+          <picture>
+            <source media="(prefers-color-scheme: dark)" srcset="assets/shots/project-ai-dark-1224.webp 1224w, assets/shots/project-ai-dark.webp 2448w" sizes="(max-width: 900px) 100vw, 700px">
+            <img class="shot" src="assets/shots/project-ai-light.webp" srcset="assets/shots/project-ai-light-1224.webp 1224w, assets/shots/project-ai-light.webp 2448w" sizes="(max-width: 900px) 100vw, 700px" width="2448" height="1630" loading="lazy" alt="The orbit project page with the Ask AI panel open on the right: agent picker, task box and autonomy choice.">
+          </picture>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top: 0">
+      <div class="wrap wide-media">
+        <div class="head reveal">
+          <h2>A to-do list for every project.</h2>
+          <p class="lede">Add tasks where you work, send one to an agent, and see what's open in a desktop widget and the menu bar.</p>
+        </div>
+        <picture class="reveal">
+          <source media="(prefers-color-scheme: dark)" srcset="assets/shots/tasks-dark-1224.webp 1224w, assets/shots/tasks-dark.webp 2448w" sizes="(max-width: 1240px) 100vw, 1200px">
+          <img class="shot" src="assets/shots/tasks-light.webp" srcset="assets/shots/tasks-light-1224.webp 1224w, assets/shots/tasks-light.webp 2448w" sizes="(max-width: 1240px) 100vw, 1200px" width="2448" height="1630" loading="lazy" alt="The Tasks page: three open tasks grouped by project, each with an Ask AI button, and recently done tasks below.">
+        </picture>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top: 0">
+      <div class="wrap">
+        <div class="section-head reveal">
+          <h2>Up and running in a minute.</h2>
+        </div>
+        <div class="process">
+          <div class="process-step reveal">
+            <picture><source media="(prefers-color-scheme: dark)" srcset="assets/illus/folders-dark.webp"><img src="assets/illus/folders-light.webp" alt="" width="140" height="140" loading="lazy"></picture>
+            <h3>Choose your projects folder</h3>
+            <p>NexLauncher scans it, finds each app and groups folders that hold several.</p>
+          </div>
+          <div class="process-step reveal" style="--delay: .1s">
+            <picture><source media="(prefers-color-scheme: dark)" srcset="assets/illus/play-dark.webp"><img src="assets/illus/play-light.webp" alt="" width="140" height="140" loading="lazy"></picture>
+            <h3>Press Run</h3>
+            <p>It installs what's missing if you agree, starts the right command and shows the logs.</p>
+          </div>
+          <div class="process-step reveal" style="--delay: .2s">
+            <picture><source media="(prefers-color-scheme: dark)" srcset="assets/illus/robot-dark.webp"><img src="assets/illus/robot-light.webp" alt="" width="140" height="140" loading="lazy"></picture>
+            <h3>Hand off the rest</h3>
+            <p>Commit and push, open a terminal, or give the next task to an agent.</p>
+          </div>
+        </div>
+        <p class="reveal" style="margin-top: 40px"><a class="btn btn-ghost" href="how-it-works.html">How it works<i class="ph ph-arrow-right"></i></a></p>
+      </div>
+    </section>
+
+    <section class="section" id="download" style="padding-top: 0">
+      <div class="wrap">
+        <div class="download reveal">
+          <div class="download-copy">
+            <h2>Get NexLauncher. It's free.</h2>
+            <div class="release-meta">
+              <span><i class="ph ph-tag"></i><span data-release-version>Version 3.0.0</span></span>
+              <span><i class="ph ph-calendar-blank"></i><span data-release-date>27 October 2026</span></span>
+              <span><i class="ph ph-laptop"></i><span data-release-macos>macOS 26.0 or later</span></span>
+              <span><i class="ph ph-file-zip"></i><span data-release-size>5.4 MB</span></span>
+              <span hidden data-download-count></span>
+            </div>
+            <div class="hero-actions">
+              <a class="btn btn-primary" data-download href="https://yrtrfuwykdxuppvlgprd.supabase.co/storage/v1/object/public/releases/NexLauncher-3.0.0.zip" data-version="3.0.0"><i class="ph-fill ph-apple-logo"></i>Download for Mac</a>
+              <a class="btn btn-ghost" href="changelog.html">What's new</a>
+            </div>
+            <p class="muted" style="font-size: 15px">It isn't notarised yet, so macOS asks you to allow it once in Privacy &amp; Security. <a href="how-it-works.html#install">How to open it</a></p>
+            <form class="form" data-subscribe novalidate style="margin-top: 12px">
+              <label for="email">Email me when a new version is out</label>
+              <div class="row">
+                <input id="email" type="email" name="email" autocomplete="email" placeholder="name@example.com" required maxlength="254" aria-describedby="email-help email-status">
+                <button class="btn btn-ghost" type="submit">Notify me</button>
+              </div>
+              <span class="help" id="email-help">Only release notes. No other emails.</span>
+              <span class="status" id="email-status" role="status" aria-live="polite"></span>
+            </form>
+          </div>
+          <picture class="illo float">
+            <source media="(prefers-color-scheme: dark)" srcset="assets/illus/rocket-dark.webp">
+            <img src="assets/illus/rocket-light.webp" alt="" width="300" height="300" loading="lazy">
+          </picture>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top: 0">
+      <div class="wrap contrib reveal">
+        <div class="contrib-copy">
+          <h2>Built in the open.</h2>
+          <p class="lede">NexLauncher is Swift and SwiftUI on GitHub. Report a bug, suggest a stack it should run, or send a pull request.</p>
+        </div>
+        <a class="btn btn-ghost" href="contribute.html"><i class="ph ph-git-pull-request"></i>Contribute</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <a class="brand" href="./"><img src="assets/icon.webp" alt="" width="28" height="28" style="width:28px;height:28px">NexLauncher</a>
+      <nav aria-label="Footer">
+        <a href="how-it-works.html">How it works</a>
+        <a href="changelog.html">Changelog</a>
+        <a href="contribute.html">Contribute</a>
+        <a href="https://github.com/NiyonshutiDavid/NexLauncher" rel="noopener">GitHub</a>
+        <a href="https://nexventures.net" rel="noopener">Nexventures</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

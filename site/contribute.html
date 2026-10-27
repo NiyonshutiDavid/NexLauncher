@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contribute to NexLauncher</title>
+  <meta name="description" content="NexLauncher is built in the open on GitHub. Report bugs, suggest stacks and send pull requests.">
+  <meta name="theme-color" content="#f7f8fa" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#07080c" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="assets/favicon.png">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+  <link rel="stylesheet" href="css/site.css?v=2">
+  <script src="js/site.js?v=2" defer></script>
+</head>
+<body>
+  <header class="nav">
+    <div class="wrap">
+      <a class="brand" href="./"><img src="assets/icon.webp" alt="" width="34" height="34">NexLauncher</a>
+      <button class="nav-toggle" aria-label="Menu" aria-expanded="false" aria-controls="nav-links"><i class="ph ph-list"></i></button>
+      <nav class="nav-links" id="nav-links">
+        <a href="how-it-works.html">How it works</a>
+        <a href="changelog.html">Changelog</a>
+        <a href="contribute.html" aria-current="page">Contribute</a>
+        <a href="https://github.com/NiyonshutiDavid/NexLauncher" rel="noopener">GitHub</a>
+        <a class="btn btn-primary btn-sm" data-download href="https://yrtrfuwykdxuppvlgprd.supabase.co/storage/v1/object/public/releases/NexLauncher-3.0.0.zip" data-version="3.0.0"><i class="ph-fill ph-apple-logo"></i>Download for Mac</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="wrap split">
+        <div class="hero-copy reveal">
+          <h1>Help build NexLauncher.</h1>
+          <p class="lede">It's Swift and SwiftUI, tested with Swift Testing, and every change is welcome: a bug report, a stack it should run, or a pull request.</p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="https://github.com/NiyonshutiDavid/NexLauncher" rel="noopener"><i class="ph ph-github-logo"></i>View on GitHub</a>
+            <a class="btn btn-ghost" href="https://github.com/NiyonshutiDavid/NexLauncher/issues/new" rel="noopener"><i class="ph ph-bug"></i>Report a bug</a>
+          </div>
+        </div>
+        <picture class="illo float reveal">
+          <source media="(prefers-color-scheme: dark)" srcset="assets/illus/branchGraph-dark.webp">
+          <img src="assets/illus/branchGraph-light.webp" alt="" width="320" height="320">
+        </picture>
+      </div>
+    </section>
+
+    <div class="wrap">
+      <section class="chapter" id="build">
+        <div class="chapter-side">
+          <picture><source media="(prefers-color-scheme: dark)" srcset="assets/illus/terminal-dark.webp"><img src="assets/illus/terminal-light.webp" alt="" width="120" height="120" loading="lazy"></picture>
+          <h2>Build it locally</h2>
+        </div>
+        <div class="prose">
+          <p>You need macOS 26 and Xcode 26 (Swift 6.2).</p>
+          <pre><code>git clone https://github.com/NiyonshutiDavid/NexLauncher.git
+cd NexLauncher
+swift test             # the test suites
+./build.sh             # builds NexLauncher.app
+./build.sh --install   # copies it to /Applications and opens it</code></pre>
+          <p><code>build.sh</code> signs with your first Apple Development identity and falls back to ad-hoc signing. Desktop widgets need a real signature to load.</p>
+        </div>
+      </section>
+
+      <section class="chapter" id="layout">
+        <div class="chapter-side">
+          <picture><source media="(prefers-color-scheme: dark)" srcset="assets/illus/layers-dark.webp"><img src="assets/illus/layers-light.webp" alt="" width="120" height="120" loading="lazy"></picture>
+          <h2>Where things live</h2>
+        </div>
+        <div class="groups">
+          <div class="group">
+            <h3><i class="ph ph-cpu"></i>NexCore</h3>
+            <p>Models, stack detection, scanning, settings and agent commands. No UI, most of the tests.</p>
+          </div>
+          <div class="group">
+            <h3><i class="ph ph-play-circle"></i>NexProcess</h3>
+            <p>Starts services in their own process groups and stops them cleanly.</p>
+          </div>
+          <div class="group">
+            <h3><i class="ph ph-git-branch"></i>NexGit and NexTerminal</h3>
+            <p>Git commands and parsing, and the embedded terminal built on SwiftTerm.</p>
+          </div>
+          <div class="group">
+            <h3><i class="ph ph-app-window"></i>NexUI, NexLauncher and Widgets</h3>
+            <p>SwiftUI views and the app model, the app entry point and menu bar, and the WidgetKit extension.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="chapter" id="ideas">
+        <div class="chapter-side">
+          <picture><source media="(prefers-color-scheme: dark)" srcset="assets/illus/telescope-dark.webp"><img src="assets/illus/telescope-light.webp" alt="" width="120" height="120" loading="lazy"></picture>
+          <h2>Good places to start</h2>
+        </div>
+        <div class="prose">
+          <ul>
+            <li><strong>Teach it a new stack.</strong> Add a case to <code>StackDetector</code> with a test fixture in <code>Tests/NexCoreTests</code>.</li>
+            <li><strong>Richer agent output.</strong> Claude Code's progress is parsed into steps; Codex, Gemini CLI and Antigravity still stream plain text.</li>
+            <li><strong>Notarised builds.</strong> A release workflow that signs with Developer ID and notarises, so nobody has to use Open Anyway.</li>
+            <li><strong>Fix something that bugged you.</strong> If it got in your way, it probably gets in someone else's.</li>
+          </ul>
+          <p>Before a pull request: run <code>swift test</code>, keep new logic in <code>NexCore</code> with tests, and add a screenshot for anything visual. The full guide is in <a href="https://github.com/NiyonshutiDavid/NexLauncher/blob/main/CONTRIBUTING.md" rel="noopener">CONTRIBUTING.md</a>.</p>
+        </div>
+      </section>
+
+      <section class="chapter" id="rules">
+        <div class="chapter-side">
+          <picture><source media="(prefers-color-scheme: dark)" srcset="assets/illus/pin-dark.webp"><img src="assets/illus/pin-light.webp" alt="" width="120" height="120" loading="lazy"></picture>
+          <h2>Ground rules</h2>
+        </div>
+        <div class="prose">
+          <ul>
+            <li>NexLauncher never stores credentials. Git and AI agents keep their own sign-in.</li>
+            <li>Text from projects, tasks or agents never goes into a shell command; pass it as an environment variable.</li>
+            <li>Be kind in issues and reviews.</li>
+          </ul>
+          <h3 style="margin-top: 18px">People who've contributed</h3>
+          <div class="people" data-contributors>
+            <a href="https://github.com/NiyonshutiDavid" rel="noopener"><img src="https://github.com/NiyonshutiDavid.png?size=64" alt="" width="32" height="32" loading="lazy">NiyonshutiDavid</a>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <a class="brand" href="./"><img src="assets/icon.webp" alt="" width="28" height="28" style="width:28px;height:28px">NexLauncher</a>
+      <nav aria-label="Footer">
+        <a href="how-it-works.html">How it works</a>
+        <a href="changelog.html">Changelog</a>
+        <a href="contribute.html">Contribute</a>
+        <a href="https://github.com/NiyonshutiDavid/NexLauncher" rel="noopener">GitHub</a>
+        <a href="https://nexventures.net" rel="noopener">Nexventures</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

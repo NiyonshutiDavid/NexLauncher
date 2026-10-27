@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>How NexLauncher works</title>
+  <meta name="description" content="How NexLauncher finds your projects, runs them, hands tasks to AI agents and keeps your credentials out of the app.">
+  <meta name="theme-color" content="#f7f8fa" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#07080c" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="assets/favicon.png">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+  <link rel="stylesheet" href="css/site.css?v=2">
+  <script src="js/site.js?v=2" defer></script>
+</head>
+<body>
+  <header class="nav">
+    <div class="wrap">
+      <a class="brand" href="./"><img src="assets/icon.webp" alt="" width="34" height="34">NexLauncher</a>
+      <button class="nav-toggle" aria-label="Menu" aria-expanded="false" aria-controls="nav-links"><i class="ph ph-list"></i></button>
+      <nav class="nav-links" id="nav-links">
+        <a href="how-it-works.html" aria-current="page">How it works</a>
+        <a href="changelog.html">Changelog</a>
+        <a href="contribute.html">Contribute</a>
+        <a href="https://github.com/NiyonshutiDavid/NexLauncher" rel="noopener">GitHub</a>
+        <a class="btn btn-primary btn-sm" data-download href="https://yrtrfuwykdxuppvlgprd.supabase.co/storage/v1/object/public/releases/NexLauncher-3.0.0.zip" data-version="3.0.0"><i class="ph-fill ph-apple-logo"></i>Download for Mac</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="wrap split">
+        <div class="hero-copy reveal">
+          <h1>How NexLauncher works</h1>
+          <p class="lede">From installing it to handing a task to an agent, here is what happens behind each button.</p>
+        </div>
+        <picture class="illo float reveal">
+          <source media="(prefers-color-scheme: dark)" srcset="assets/illus/layers-dark.webp">
+          <img src="assets/illus/layers-light.webp" alt="" width="320" height="320">
+        </picture>
+      </div>
+    </section>
+
+    <div class="wrap">
+      <section class="chapter" id="install">
+        <div class="chapter-side">
+          <picture><source media="(prefers-color-scheme: dark)" srcset="assets/illus/rocket-dark.webp"><img src="assets/illus/rocket-light.webp" alt="" width="120" height="120" loading="lazy"></picture>
+          <h2>Install</h2>
+        </div>
+        <div class="prose">
+          <ol>
+            <li>Download the zip and open it. Move <strong>NexLauncher.app</strong> to your Applications folder.</li>
+            <li>Open it. NexLauncher isn't notarised by Apple yet, so macOS says it can't check it. Click <strong>Done</strong>.</li>
+            <li>Open <strong>System Settings → Privacy &amp; Security</strong>, scroll to the bottom and click <strong>Open Anyway</strong> next to NexLauncher, then confirm with your password or Touch ID.</li>
+          </ol>
+          <p>You only do this once. If you prefer Terminal, this does the same:</p>
+          <pre><code>xattr -dr com.apple.quarantine /Applications/NexLauncher.app</code></pre>
+          <p>NexLauncher needs <strong>macOS 26</strong> or later. It's free, and you can read and build every line of it <a href="contribute.html">from source</a>.</p>
+        </div>
+      </section>
+
+      <section class="chapter" id="projects">
+        <div class="chapter-side">
+          <picture><source media="(prefers-color-scheme: dark)" srcset="assets/illus/folders-dark.webp"><img src="assets/illus/folders-light.webp" alt="" width="120" height="120" loading="lazy"></picture>
+          <h2>It finds your projects</h2>
+        </div>
+        <div class="prose" style="max-width: none">
+          <p>The welcome tour asks where your projects live. NexLauncher scans that folder a few levels deep and looks at the files inside each one, not its name. A folder with a frontend and a backend side by side becomes one <strong>full-stack</strong> project; a folder that only holds other apps becomes a <strong>collection</strong>.</p>
+          <div class="groups">
+            <div class="group">
+              <h3><i class="ph ph-file-js"></i>JavaScript and TypeScript</h3>
+              <p>Uses the package manager your lockfile names.</p>
+              <div class="chips"><span class="chip">Vite</span><span class="chip">Next.js</span><span class="chip">Astro</span><span class="chip">Vue</span><span class="chip">Express</span><span class="chip">Expo</span><span class="chip">Deno</span><span class="chip">npm</span><span class="chip">pnpm</span><span class="chip">yarn</span><span class="chip">bun</span></div>
+            </div>
+            <div class="group">
+              <h3><i class="ph ph-file-py"></i>Python</h3>
+              <p>Picks the right server for the framework it finds.</p>
+              <div class="chips"><span class="chip">Django</span><span class="chip">FastAPI</span><span class="chip">Flask</span><span class="chip">Streamlit</span><span class="chip">Poetry</span><span class="chip">uv</span><span class="chip">main.py</span></div>
+            </div>
+            <div class="group">
+              <h3><i class="ph ph-device-mobile"></i>Mobile</h3>
+              <p>Runs on the simulator, emulator or device you choose.</p>
+              <div class="chips"><span class="chip">Flutter</span><span class="chip">iOS Simulator</span><span class="chip">Android Emulator</span></div>
+            </div>
+            <div class="group">
+              <h3><i class="ph ph-stack"></i>Everything else</h3>
+              <p>Compiled languages, other frameworks and plain tooling.</p>
+              <div class="chips"><span class="chip">Go</span><span class="chip">Rust</span><span class="chip">Rails</span><span class="chip">Laravel</span><span class="chip">Spring</span><span class="chip">.NET</span><span class="chip">Phoenix</span><span class="chip">Swift</span><span class="chip">Docker Compose</span><span class="chip">Makefile</span><span class="chip">Procfile</span><span class="chip">Static HTML</span></div>
+            </div>
+          </div>
+          <p>If a guess is wrong, change the command or port for that project in <strong>Settings → Projects</strong>.</p>
+        </div>
+      </section>
+
+      <section class="chapter" id="run">
+        <div class="chapter-side">
+          <picture><source media="(prefers-color-scheme: dark)" srcset="assets/illus/play-dark.webp"><img src="assets/illus/play-light.webp" alt="" width="120" height="120" loading="lazy"></picture>
+          <h2>Press Run</h2>
+        </div>
+        <div class="prose">
+          <p>Each project offers only the actions that apply: Frontend, Backend, Both, Flutter, Docker or Run.</p>
+          <ul>
+            <li><strong>Missing dependencies?</strong> NexLauncher asks first, then installs them with the project's own tool and shows the progress.</li>
+            <li><strong>Logs and ports.</strong> Output streams into the Logs tab. NexLauncher picks up the port a server listens on, so you can open it in your browser from the menu bar or the ready notification.</li>
+            <li><strong>Stopping is clean.</strong> Every service runs in its own process group, so Stop ends the server and everything it started.</li>
+            <li><strong>Quitting</strong> with something still running asks whether to stop it or keep it going from the menu bar.</li>
+          </ul>
+          <figure class="figure">
+            <picture>
+              <source media="(prefers-color-scheme: dark)" srcset="assets/shots/flutter-dark-1224.webp">
+              <img class="shot" src="assets/shots/flutter-light-1224.webp" width="1224" height="815" loading="lazy" alt="The Flutter page listing iOS simulators, Android emulators and devices ready to run.">
+            </picture>
+            <figcaption>Flutter projects run on a simulator, an emulator, Chrome or the Mac itself.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="chapter" id="ai">
+        <div class="chapter-side">
+          <picture><source media="(prefers-color-scheme: dark)" srcset="assets/illus/robot-dark.webp"><img src="assets/illus/robot-light.webp" alt="" width="120" height="120" loading="lazy"></picture>
+          <h2>AI agents</h2>
+        </div>
+        <div class="prose" style="max-width: none">
+          <p>NexLauncher doesn't run a model of its own. It starts the command-line agent you already use, in the project's folder, and shows what it does as it works. Replies to Claude Code continue the same session; other agents get the earlier exchange along with your reply.</p>
+          <p>Your task is passed to the agent as an environment variable, never pasted into the command, so quotes or symbols in it can't run anything. You choose how much the agent may do:</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th scope="col">Agent</th><th scope="col">Plan only</th><th scope="col">Edit files</th><th scope="col">Full auto</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Claude Code</th><td><code>--permission-mode plan</code></td><td><code>--permission-mode acceptEdits</code></td><td><code>--dangerously-skip-permissions</code></td></tr>
+                <tr><th scope="row">Codex</th><td><code>--sandbox read-only</code></td><td><code>--full-auto</code></td><td><code>--dangerously-bypass-approvals-and-sandbox</code></td></tr>
+                <tr><th scope="row">Antigravity</th><td><code>--mode plan</code></td><td><code>--mode accept-edits</code></td><td><code>--dangerously-skip-permissions</code></td></tr>
+                <tr><th scope="row">Gemini CLI</th><td>default approvals</td><td><code>--approval-mode auto_edit</code></td><td><code>--yolo</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Any other agent works through <strong>Settings → AI → Custom agent</strong>: give its command and use <code>$NEX_TASK</code> where the task goes. Signing in happens in each agent's own tool, opened in a terminal tab.</p>
+          <figure class="figure">
+            <picture>
+              <source media="(prefers-color-scheme: dark)" srcset="assets/shots/ai-dark-1224.webp">
+              <img class="shot" src="assets/shots/ai-light-1224.webp" width="1224" height="815" loading="lazy" alt="The AI Assistant page showing Claude Code, Codex, Gemini CLI, Antigravity and a custom agent.">
+            </picture>
+            <figcaption>The AI page shows which agents are installed and lets you sign in to each one.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="chapter" id="git">
+        <div class="chapter-side">
+          <picture><source media="(prefers-color-scheme: dark)" srcset="assets/illus/branchGraph-dark.webp"><img src="assets/illus/branchGraph-light.webp" alt="" width="120" height="120" loading="lazy"></picture>
+          <h2>Git, terminal and the menu bar</h2>
+        </div>
+        <div class="prose">
+          <ul>
+            <li><strong>Git tab:</strong> set your name and email, stage files, commit, pull, push, create and switch branches, and read the history. It runs the git you have installed, with your Keychain or SSH credentials, and never force-pushes.</li>
+            <li><strong>Terminal:</strong> a real zsh in any project or folder, so editors and interactive tools work.</li>
+            <li><strong>Menu bar and <kbd>⌃⌥⌘L</kbd>:</strong> running services, pinned projects and open tasks, with Run and Stop.</li>
+            <li><strong>Widgets:</strong> Running Services, Quick Launch and Tasks for your desktop.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="chapter" id="privacy">
+        <div class="chapter-side">
+          <picture><source media="(prefers-color-scheme: dark)" srcset="assets/illus/power-dark.webp"><img src="assets/illus/power-light.webp" alt="" width="120" height="120" loading="lazy"></picture>
+          <h2>What stays on your Mac</h2>
+        </div>
+        <div class="prose">
+          <p>Everything. NexLauncher keeps its settings and tasks in <code>~/Library/Application Support/NexLauncher</code> and doesn't send anything anywhere. It stores no passwords, tokens or API keys: git and each AI agent keep their own sign-in.</p>
+          <p>This website counts downloads and, if you ask for update emails, stores your address. Nothing else.</p>
+        </div>
+      </section>
+    </div>
+
+    <section class="section">
+      <div class="wrap contrib reveal">
+        <div class="contrib-copy">
+          <h2>Ready to try it?</h2>
+          <p class="lede">Free for macOS 26. Takes a minute to set up.</p>
+        </div>
+        <a class="btn btn-primary" data-download href="https://yrtrfuwykdxuppvlgprd.supabase.co/storage/v1/object/public/releases/NexLauncher-3.0.0.zip" data-version="3.0.0"><i class="ph-fill ph-apple-logo"></i>Download for Mac</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <a class="brand" href="./"><img src="assets/icon.webp" alt="" width="28" height="28" style="width:28px;height:28px">NexLauncher</a>
+      <nav aria-label="Footer">
+        <a href="how-it-works.html">How it works</a>
+        <a href="changelog.html">Changelog</a>
+        <a href="contribute.html">Contribute</a>
+        <a href="https://github.com/NiyonshutiDavid/NexLauncher" rel="noopener">GitHub</a>
+        <a href="https://nexventures.net" rel="noopener">Nexventures</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

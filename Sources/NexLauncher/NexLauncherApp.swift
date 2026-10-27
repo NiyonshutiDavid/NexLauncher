@@ -86,6 +86,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Developer option for the website: `-NexExportIllustrations <dir>` writes the illustrations as PNGs and quits.
+        if let dir = UserDefaults.standard.string(forKey: "NexExportIllustrations"), !dir.isEmpty {
+            do { try IllustrationExporter.export(to: URL(fileURLWithPath: dir)) } catch { NSLog("Export failed: \(error)") }
+            NSApp.terminate(nil)
+            return
+        }
         statusBar = StatusBarController(model: model)        // menu bar item + ⌃⌥⌘L quick panel
         Task { await model.refreshNotificationStatus() }
     }

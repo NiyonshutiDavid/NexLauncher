@@ -28,8 +28,9 @@ panel and desktop widgets.
 
 Download the latest release from the website, unzip it and move **NexLauncher.app** to Applications.
 
-The app isn't notarised yet, so the first time macOS will say it can't check it. Right-click the app, choose
-**Open**, then **Open** again (or run `xattr -dr com.apple.quarantine /Applications/NexLauncher.app`).
+The app isn't notarised yet, so the first time macOS says it can't check it for malicious software. Click **Done**,
+open **System Settings → Privacy & Security**, scroll down and click **Open Anyway** next to NexLauncher, then
+confirm. (Or run `xattr -dr com.apple.quarantine /Applications/NexLauncher.app` in Terminal.)
 
 ## Build from source
 

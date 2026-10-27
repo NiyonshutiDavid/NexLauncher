@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Changelog: NexLauncher</title>
+  <meta name="description" content="What's new in each version of NexLauncher.">
+  <meta name="theme-color" content="#f7f8fa" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#07080c" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="assets/favicon.png">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+  <link rel="stylesheet" href="css/site.css?v=2">
+  <script src="js/site.js?v=2" defer></script>
+</head>
+<body>
+  <header class="nav">
+    <div class="wrap">
+      <a class="brand" href="./"><img src="assets/icon.webp" alt="" width="34" height="34">NexLauncher</a>
+      <button class="nav-toggle" aria-label="Menu" aria-expanded="false" aria-controls="nav-links"><i class="ph ph-list"></i></button>
+      <nav class="nav-links" id="nav-links">
+        <a href="how-it-works.html">How it works</a>
+        <a href="changelog.html" aria-current="page">Changelog</a>
+        <a href="contribute.html">Contribute</a>
+        <a href="https://github.com/NiyonshutiDavid/NexLauncher" rel="noopener">GitHub</a>
+        <a class="btn btn-primary btn-sm" data-download href="https://yrtrfuwykdxuppvlgprd.supabase.co/storage/v1/object/public/releases/NexLauncher-3.0.0.zip" data-version="3.0.0"><i class="ph-fill ph-apple-logo"></i>Download for Mac</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="wrap split">
+        <div class="hero-copy reveal">
+          <h1>Changelog</h1>
+          <p class="lede">Every version of NexLauncher and what changed in it.</p>
+          <form class="form" data-subscribe novalidate>
+            <label for="email">Email me when a new version is out</label>
+            <div class="row">
+              <input id="email" type="email" name="email" autocomplete="email" placeholder="name@example.com" required maxlength="254" aria-describedby="email-help email-status">
+              <button class="btn btn-ghost" type="submit">Notify me</button>
+            </div>
+            <span class="help" id="email-help">Only release notes. No other emails.</span>
+            <span class="status" id="email-status" role="status" aria-live="polite"></span>
+          </form>
+        </div>
+        <picture class="illo float reveal">
+          <source media="(prefers-color-scheme: dark)" srcset="assets/illus/checklist-dark.webp">
+          <img src="assets/illus/checklist-light.webp" alt="" width="320" height="320">
+        </picture>
+      </div>
+    </section>
+
+    <section class="section" style="padding-top: 24px">
+      <div class="wrap releases" data-changelog aria-live="polite">
+        <div class="release">
+          <div class="release-side"><div class="skeleton" style="height: 18px; width: 64px"></div><div class="skeleton" style="height: 16px; width: 120px"></div></div>
+          <div class="release-body">
+            <div class="skeleton" style="height: 32px; width: 60%"></div>
+            <div class="skeleton" style="height: 16px; width: 80%"></div>
+            <div class="skeleton" style="height: 16px; width: 70%"></div>
+            <div class="skeleton" style="height: 16px; width: 75%"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <a class="brand" href="./"><img src="assets/icon.webp" alt="" width="28" height="28" style="width:28px;height:28px">NexLauncher</a>
+      <nav aria-label="Footer">
+        <a href="how-it-works.html">How it works</a>
+        <a href="changelog.html">Changelog</a>
+        <a href="contribute.html">Contribute</a>
+        <a href="https://github.com/NiyonshutiDavid/NexLauncher" rel="noopener">GitHub</a>
+        <a href="https://nexventures.net" rel="noopener">Nexventures</a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>
