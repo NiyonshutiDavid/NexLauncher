@@ -39,8 +39,10 @@ struct WindowStyler: NSViewRepresentable {
         ]
         if window.styleMask.contains(.fullScreen) { isFullScreen = true }
         // Developer option for screenshots: `-NexFullScreen YES`.
-        if UserDefaults.standard.bool(forKey: "NexFullScreen"), !window.styleMask.contains(.fullScreen) {
-            window.toggleFullScreen(nil)
+        if UserDefaults.standard.bool(forKey: "NexFullScreen") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {   // once the window is on screen
+                if !window.styleMask.contains(.fullScreen) { window.toggleFullScreen(nil) }
+            }
         }
     }
 }

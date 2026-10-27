@@ -6,6 +6,7 @@ import NexGit
 struct SettingsPage: View {
     @Bindable var model: AppModel
     @Environment(\.theme) private var theme
+    @Environment(\.windowIsFullScreen) private var fullScreen
     let section: SettingsSection
     @State private var selected: SettingsSection
 
@@ -59,7 +60,9 @@ struct SettingsPage: View {
                 }
                 Spacer()
             }
-            .frame(width: 210).padding(24).padding(.top, HeaderMetrics.contentInset)
+            // Not a scroll view: in a window the toolbar's safe area already clears the header; in full screen
+            // (toolbar only on hover) it has to start below the header and its fade itself.
+            .frame(width: 210).padding(24).padding(.top, fullScreen ? HeaderMetrics.height : HeaderMetrics.contentInset)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
