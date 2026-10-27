@@ -1,12 +1,15 @@
 import Foundation
 import Observation
+#if canImport(ServiceManagement)
 import ServiceManagement
+#endif
 
 public protocol LoginItemControlling: Sendable {
     var isEnabled: Bool { get }
     func setEnabled(_ on: Bool) throws
 }
 
+#if canImport(ServiceManagement)
 /// Registers the main app as a login item.
 public struct SMLoginItem: LoginItemControlling {
     public init() {}
@@ -14,6 +17,26 @@ public struct SMLoginItem: LoginItemControlling {
     public func setEnabled(_ on: Bool) throws {
         if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
     }
+}
+#endif
+
+/// Where the system has no login-item service the app knows about: always off, and says so.
+public struct UnsupportedLoginItem: LoginItemControlling {
+    public struct Unsupported: LocalizedError {
+        public var errorDescription: String? { "Launch at login isn't available on this system yet." }
+    }
+    public init() {}
+    public var isEnabled: Bool { false }
+    public func setEnabled(_ on: Bool) throws { if on { throw Unsupported() } }
+}
+
+/// The login-item controller for the system NexLauncher is running on.
+public func defaultLoginItem() -> LoginItemControlling {
+    #if canImport(ServiceManagement)
+    SMLoginItem()
+    #else
+    UnsupportedLoginItem()
+    #endif
 }
 
 /// Observable wrapper: keeps the toggle truthful and surfaces failures instead of swallowing them.
@@ -23,7 +46,7 @@ public final class LaunchAtLogin {
     public private(set) var errorMessage: String?
     private let controller: LoginItemControlling
 
-    public init(controller: LoginItemControlling = SMLoginItem()) {
+    public init(controller: LoginItemControlling = defaultLoginItem()) {
         self.controller = controller
         self.isEnabled = controller.isEnabled
     }
