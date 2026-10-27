@@ -143,7 +143,7 @@ extension AppModel {
             let p = Process()
             p.executableURL = URL(fileURLWithPath: "/bin/zsh")
             p.arguments = ["-lc", "flutter devices --machine"]
-            let out = Pipe()
+            let out = Pipe.closeOnExec()
             p.standardOutput = out
             p.standardError = FileHandle.nullDevice
             guard (try? p.run()) != nil else { return [] }

@@ -11,7 +11,8 @@ import Foundation
 
     @Test func defaultsPointAtNexventuresFolder() {
         let d = AppSettings.defaults()
-        #expect(d.scanRoot.path.hasSuffix("Documents/Nexventures"))
+        #expect(d.scanRoot == Platform.paths.defaultScanRoot)
+        if HostOS.current == .macOS { #expect(d.scanRoot.path.hasSuffix("Documents/Nexventures")) }
         #expect(d.showDockIcon)
         #expect(d.pinnedProjectIDs.isEmpty)
         #expect(!d.displayName.isEmpty)
@@ -52,7 +53,8 @@ import Foundation
 @Suite struct SharedLocationTests {
     @Test func sharedDirectoryIsInRealHomeNotASandboxContainer() {
         let path = SharedContainer.defaultDirectory.path
-        #expect(path.hasSuffix("Library/Application Support/NexLauncher"))
+        #expect(path.hasPrefix(AppSettings.realHome.path))
+        #expect(path.hasSuffix(HostOS.current == .macOS ? "Library/Application Support/NexLauncher" : ".local/share/nexlauncher"))
         #expect(!path.contains("/Containers/"))
     }
 
