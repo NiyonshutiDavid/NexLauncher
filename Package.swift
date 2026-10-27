@@ -32,7 +32,7 @@ targets += [
 
 #if os(Linux)
 // The Linux app: GTK 4 / libadwaita through Adwaita for Swift (needs Swift 6.3, GTK 4.20 and libadwaita 1.8, as in
-// the GNOME 51 SDK). NEX_CORE_ONLY=1 leaves it out, for systems with older GTK that only test the shared core.
+// the GNOME 50 SDK). NEX_CORE_ONLY=1 leaves it out, for systems with older GTK that only test the shared core.
 if ProcessInfo.processInfo.environment["NEX_CORE_ONLY"] == nil {
 dependencies += [.package(url: "https://git.aparoksha.dev/aparoksha/adwaita-swift", revision: "af5598fbd6f2425841f426ad388d7a7edd6c90e6")]
 products += [.executable(name: "NexLinux", targets: ["NexLinux"])]

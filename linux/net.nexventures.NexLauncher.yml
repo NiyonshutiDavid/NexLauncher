@@ -1,8 +1,8 @@
-# Flatpak build of NexLauncher for Linux (GNOME 51 runtime, Swift 6 SDK extension).
+# Flatpak build of NexLauncher for Linux (GNOME 50 runtime, Swift 6 SDK extension).
 # Built by .github/workflows/linux-release.yml:  flatpak-builder --user --force-clean build linux/net.nexventures.NexLauncher.yml
 app-id: net.nexventures.NexLauncher
 runtime: org.gnome.Platform
-runtime-version: "51"
+runtime-version: "50"
 sdk: org.gnome.Sdk
 sdk-extensions:
   - org.freedesktop.Sdk.Extension.swift6

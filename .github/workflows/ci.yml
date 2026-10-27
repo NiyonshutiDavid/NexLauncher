@@ -31,18 +31,18 @@ jobs:
       - run: swift test
 
   linux-ui:
-    # The Linux app and its tests in the GNOME 51 SDK the Flatpak ships with (VTE built by the manifest).
+    # The Linux app and its tests in the GNOME 50 SDK the Flatpak ships with (VTE built by the manifest).
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     container:
-      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-50
       options: --privileged
     steps:
       - uses: actions/checkout@v4
       - name: SDK and Swift extension
         run: |
           flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-          flatpak install -y --noninteractive --user flathub org.gnome.Sdk//51 org.gnome.Platform//51 org.freedesktop.Sdk.Extension.swift6//26.08
+          flatpak install -y --noninteractive --user flathub org.gnome.Sdk//50 org.gnome.Platform//50 org.freedesktop.Sdk.Extension.swift6//25.08
       - uses: actions/cache@v4
         with:
           path: .flatpak-builder
