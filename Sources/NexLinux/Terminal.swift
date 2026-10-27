@@ -59,7 +59,7 @@ struct VteView: AdwaitaWidget {
     let widget: UnsafeMutableRawPointer
 
     func container<Data>(data: WidgetData, type: Data.Type) -> ViewStorage where Data: ViewRenderData {
-        let storage = ViewStorage(OpaquePointer(gtk_box_new(GTK_ORIENTATION_VERTICAL, 0)))
+        let storage = ViewStorage(OpaquePointer(gtk_box_new(.GTK_ORIENTATION_VERTICAL, 0)))
         show(in: storage)
         return storage
     }
