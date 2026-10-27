@@ -18,4 +18,14 @@ import NexTestSupport
         #expect(flow.folderExists)
         #expect(flow.canAdvance)
     }
+
+    /// A typed `~/…` path means the home folder, not a folder named "~" in the working directory.
+    @Test func typedTildeMeansHome() {
+        let sb = Sandbox()
+        let flow = OnboardingModel(model: sb.makeModel(hostOS: .linux))
+        flow.setFolder(path: "~/Projects")
+        #expect(flow.folder.path == AppSettings.realHome.appendingPathComponent("Projects").path)
+        flow.setFolder(path: "/srv/code")
+        #expect(flow.folder.path == "/srv/code")
+    }
 }

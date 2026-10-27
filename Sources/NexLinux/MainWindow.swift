@@ -27,7 +27,7 @@ struct MainWindow: WindowView {
                 return .newFolder
             }())
         }
-        .dialog(visible: Binding(get: { state.app.showOnboarding }, set: { if !$0 { state.app.skipOnboarding() } }),
+        .dialog(visible: Binding(get: { state.app.showOnboarding }, set: { if !$0 { state.app.skipOnboarding(); Task { await state.app.refresh() } } }),
                 title: "Welcome", width: 560, height: 460) {
             OnboardingContent(model: state.app)
         }
@@ -37,7 +37,8 @@ struct MainWindow: WindowView {
             scanned = true
             Shared.terminals.onChange = { state.setModel { $0.tick &+= 1 } }
             Shared.services.presentMainWindow = { gtk_window_present(window.pointer?.cast()); return true }
-            Task { await state.app.refresh() }
+            // On first launch the projects folder is chosen in onboarding, which scans it when it finishes.
+            if !state.app.showOnboarding { Task { await state.app.refresh() } }
         }
     }
 

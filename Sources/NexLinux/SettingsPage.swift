@@ -88,7 +88,7 @@ struct OnboardingContent: View {
                 Form { EntryRow("Your name", text: Binding(get: { f.name }, set: { f.name = $0 })) }
             case .projects:
                 Form {
-                    EntryRow("Projects folder", text: Binding(get: { f.folder.path }, set: { f.folder = URL(fileURLWithPath: $0) }))
+                    EntryRow("Projects folder", text: Binding(get: { f.folder.path }, set: { f.setFolder(path: $0) }))
                 }
                 if !f.folderExists {
                     Button("Create this folder") { try? f.createFolder() }.pill().halign(.start)
@@ -105,7 +105,7 @@ struct OnboardingContent: View {
             }
             HStack(spacing: 8) {
                 if !f.isFirst { Button("Back") { f.back() }.pill() }
-                Button("Skip") { model.skipOnboarding() }.flat()
+                Button("Skip") { model.skipOnboarding(); Task { await model.refresh() } }.flat()
                 Button(f.isLast ? "Start" : "Next") {
                     if f.isLast { Task { await f.finish() } } else { f.next() }
                 }

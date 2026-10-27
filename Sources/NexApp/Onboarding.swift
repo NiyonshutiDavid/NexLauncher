@@ -51,6 +51,16 @@ public final class OnboardingModel {
         return FileManager.default.fileExists(atPath: folder.path, isDirectory: &isDir) && isDir.boolValue
     }
 
+    /// Sets the folder from typed text; a leading `~` means the home folder.
+    public func setFolder(path: String) {
+        let trimmed = path.trimmingCharacters(in: .whitespaces)
+        if trimmed == "~" || trimmed.hasPrefix("~/") {
+            folder = AppSettings.realHome.appendingPathComponent(String(trimmed.dropFirst(2)))
+        } else {
+            folder = URL(fileURLWithPath: trimmed)
+        }
+    }
+
     /// Creates the chosen projects folder (a fresh Linux account often has none).
     public func createFolder() throws {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
