@@ -2,6 +2,7 @@
 # Builds NexLauncher.app (with the widget extension), signs it, and optionally installs it.
 #   ./build.sh            build into ./NexLauncher.app
 #   ./build.sh --install  also copy to /Applications and launch
+#   ./build.sh --check-widget  only typecheck the widget extension's sources (fast; used by CI)
 # Builds a universal app (Apple silicon + Intel) for macOS 14 and later. ARCHS="arm64" builds one architecture.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -11,6 +12,25 @@ ARCHS=(${=ARCHS:-arm64 x86_64})
 MIN_MACOS="14.0"
 
 WIDGET="PlugIns/NexWidgets.appex"
+
+# The widget compiles NexCore's sources into its own module, plus the app's illustrations and theme
+# (copied without `import NexCore` / `import NexApp`). LoginItem.swift is left out: SMAppService.mainApp isn't
+# available to extensions.
+widget_sources() {
+    CORE=(${(f)"$(ls Sources/NexCore/*.swift | grep -v LoginItem.swift)"})
+    SHARED="$(mktemp -d)"
+    for f in Sources/NexUI/Illustrations.swift Sources/NexUI/Theme.swift; do
+        sed -e '/^import NexCore$/d' -e '/^import NexApp$/d' "$f" > "$SHARED/$(basename $f)"
+    done
+}
+
+if [[ "${1:-}" == "--check-widget" ]]; then
+    widget_sources
+    swiftc -typecheck -parse-as-library -swift-version 5 -target arm64-apple-macos$MIN_MACOS -application-extension \
+        Widgets/NexWidgets.swift $CORE "$SHARED"/*.swift
+    echo "Widget sources typecheck."
+    exit 0
+fi
 IDENTITY="${SIGN_IDENTITY:-$(security find-identity -v -p codesigning | sed -n 's/.*"\(Apple Development[^"]*\)".*/\1/p' | head -1)}"
 [[ -z "$IDENTITY" ]] && IDENTITY="-" && echo "No signing identity found: using ad-hoc signing (widgets may not load)."
 echo "Signing with: $IDENTITY"
@@ -33,14 +53,7 @@ cp Resources/Info.plist "$APP/Contents/Info.plist"
 echo "==> Building widget extension"
 EXT="$APP/Contents/$WIDGET"
 mkdir -p "$EXT/Contents/MacOS"
-# LoginItem.swift is excluded: SMAppService.mainApp isn't available to extensions.
-CORE=(${(f)"$(ls Sources/NexCore/*.swift | grep -v LoginItem.swift)"})
-# The widget also draws the app's illustrations and theme: copy them without `import NexCore`
-# (the widget compiles NexCore's sources into its own module).
-SHARED="$(mktemp -d)"
-for f in Sources/NexUI/Illustrations.swift Sources/NexUI/Theme.swift; do
-    sed -e '/^import NexCore$/d' -e '/^import NexApp$/d' "$f" > "$SHARED/$(basename $f)"
-done
+widget_sources
 SLICES=()
 for a in $ARCHS; do
     swiftc -parse-as-library -swift-version 5 -O \

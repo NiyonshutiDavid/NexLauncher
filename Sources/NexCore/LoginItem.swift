@@ -4,11 +4,6 @@ import Observation
 import ServiceManagement
 #endif
 
-public protocol LoginItemControlling: Sendable {
-    var isEnabled: Bool { get }
-    func setEnabled(_ on: Bool) throws
-}
-
 #if canImport(ServiceManagement)
 /// Registers the main app as a login item.
 public struct SMLoginItem: LoginItemControlling {

@@ -15,6 +15,8 @@ jobs:
         run: sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)"
       - run: swift --version
       - run: swift test
+      - name: Widget extension sources
+        run: ./build.sh --check-widget
 
   linux:
     # Shared core on Ubuntu 24.04 (its GTK is too old for Adwaita for Swift, so the Linux UI is left out).
