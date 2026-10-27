@@ -39,7 +39,11 @@ public enum ProcessSpawner {
         posix_spawn_file_actions_adddup2(&actions, fds[1], 2)
         posix_spawn_file_actions_addclose(&actions, fds[0])
         posix_spawn_file_actions_addclose(&actions, fds[1])
-        posix_spawn_file_actions_addchdir(&actions, directory.path)
+        if #available(macOS 26, *) {
+            posix_spawn_file_actions_addchdir(&actions, directory.path)
+        } else {
+            posix_spawn_file_actions_addchdir_np(&actions, directory.path)   // same call, named _np before macOS 26
+        }
 
         var attrs: posix_spawnattr_t? = nil
         posix_spawnattr_init(&attrs)

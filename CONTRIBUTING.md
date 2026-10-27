@@ -18,10 +18,12 @@ Open an issue at https://github.com/NiyonshutiDavid/NexLauncher/issues with:
    swift test
    ./build.sh
    ```
-3. Logic goes in `NexCore`, `NexProcess` or `NexGit` with tests next to it in `Tests/`. Views live in `NexUI`.
-4. Keep the style of the surrounding code: small types, comments that say *why*, no new dependencies without a
+3. The app supports macOS 14 and later. For anything newer, add a fallback in `Sources/NexUI/Compat.swift`
+   (see `nexGlass`, `nexGlassButton`) rather than raising the minimum.
+4. Logic goes in `NexCore`, `NexProcess` or `NexGit` with tests next to it in `Tests/`. Views live in `NexUI`.
+5. Keep the style of the surrounding code: small types, comments that say *why*, no new dependencies without a
    reason in the pull request.
-5. Open a pull request describing the change and how you checked it. Screenshots help for anything visual.
+6. Open a pull request describing the change and how you checked it. Screenshots help for anything visual.
 
 ## Ground rules
 

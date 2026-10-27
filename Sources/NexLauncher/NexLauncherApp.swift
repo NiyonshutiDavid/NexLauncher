@@ -36,7 +36,7 @@ struct NexLauncherApp: App {
                 .frame(minWidth: 960, minHeight: 640)
                 // Full screen: the (empty) toolbar only slides in with the menu bar. Hiding it outright would make
                 // macOS drop the floating sidebar below the title bar area with square-ish corners.
-                .windowToolbarFullScreenVisibility(.onHover)
+                .nexToolbarOnHoverInFullScreen()
                 .onOpenURL { url in Task { await model.handle(url: url) } }
                 .task {
                     model.openMainWindowAction = { openWindow(id: "main") }
@@ -47,7 +47,6 @@ struct NexLauncherApp: App {
                 }
         }
         .windowStyle(.hiddenTitleBar)
-        .windowBackgroundDragBehavior(.enabled)       // the title bar is hidden: drag the window by its background
         .windowToolbarStyle(.unified)
         .commands {
             SidebarCommands()

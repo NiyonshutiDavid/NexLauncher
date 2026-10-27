@@ -2,23 +2,31 @@
 # Builds NexLauncher.app (with the widget extension), signs it, and optionally installs it.
 #   ./build.sh            build into ./NexLauncher.app
 #   ./build.sh --install  also copy to /Applications and launch
+# Builds a universal app (Apple silicon + Intel) for macOS 14 and later. ARCHS="arm64" builds one architecture.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 APP="NexLauncher.app"
+ARCHS=(${=ARCHS:-arm64 x86_64})
+MIN_MACOS="14.0"
+
 WIDGET="PlugIns/NexWidgets.appex"
 IDENTITY="${SIGN_IDENTITY:-$(security find-identity -v -p codesigning | sed -n 's/.*"\(Apple Development[^"]*\)".*/\1/p' | head -1)}"
 [[ -z "$IDENTITY" ]] && IDENTITY="-" && echo "No signing identity found: using ad-hoc signing (widgets may not load)."
 echo "Signing with: $IDENTITY"
 
 echo "==> Building app"
-swift build -c release --product NexLauncher
-BIN="$(swift build -c release --show-bin-path)"
+# One build per architecture (a multi-arch `swift build` trips over SwiftTerm's build plugin), joined with lipo.
+APP_SLICES=()
+for a in $ARCHS; do
+    swift build -c release --product NexLauncher --triple $a-apple-macosx$MIN_MACOS
+    APP_SLICES+=("$(swift build -c release --triple $a-apple-macosx$MIN_MACOS --show-bin-path)/NexLauncher")
+done
 
 echo "==> Assembling $APP"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" "$APP/Contents/$(dirname $WIDGET)"
-cp "$BIN/NexLauncher" "$APP/Contents/MacOS/NexLauncher"
+lipo -create $APP_SLICES -output "$APP/Contents/MacOS/NexLauncher"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 [[ -f Resources/AppIcon.icns ]] && cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
@@ -33,11 +41,16 @@ SHARED="$(mktemp -d)"
 for f in Sources/NexUI/Illustrations.swift Sources/NexUI/Theme.swift; do
     sed '/^import NexCore$/d' "$f" > "$SHARED/$(basename $f)"
 done
-swiftc -parse-as-library -swift-version 5 -O \
-    -target arm64-apple-macos26.0 -application-extension \
-    -Xlinker -e -Xlinker _NSExtensionMain \
-    -framework WidgetKit -framework SwiftUI \
-    -o "$EXT/Contents/MacOS/NexWidgets" Widgets/NexWidgets.swift $CORE "$SHARED"/*.swift
+SLICES=()
+for a in $ARCHS; do
+    swiftc -parse-as-library -swift-version 5 -O \
+        -target $a-apple-macos$MIN_MACOS -application-extension \
+        -Xlinker -e -Xlinker _NSExtensionMain \
+        -framework WidgetKit -framework SwiftUI \
+        -o "$SHARED/NexWidgets-$a" Widgets/NexWidgets.swift $CORE "$SHARED"/*.swift
+    SLICES+=("$SHARED/NexWidgets-$a")
+done
+lipo -create $SLICES -output "$EXT/Contents/MacOS/NexWidgets"
 rm -rf "$SHARED"
 cp Widgets/Info.plist "$EXT/Contents/Info.plist"
 
@@ -45,6 +58,7 @@ echo "==> Signing"
 codesign --force --sign "$IDENTITY" --entitlements Widgets/NexWidgets.entitlements "$EXT"
 codesign --force --sign "$IDENTITY" "$APP"
 codesign --verify --deep --strict "$APP" && echo "Signature OK"
+echo "Architectures: $(lipo -archs "$APP/Contents/MacOS/NexLauncher") (widget: $(lipo -archs "$EXT/Contents/MacOS/NexWidgets")), macOS $MIN_MACOS or later"
 
 if [[ "${1:-}" == "--install" ]]; then
     echo "==> Installing to /Applications"

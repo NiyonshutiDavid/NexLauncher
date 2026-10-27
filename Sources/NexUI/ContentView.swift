@@ -31,12 +31,12 @@ private struct RootContent: View {
                 .background(theme.canvas)
                 .animation(.smooth(duration: 0.3), value: pageKey)
                 // An invisible item: with an empty toolbar macOS drops the sidebar panel below the window controls.
-                .toolbar { ToolbarSpacer(.flexible) }
+                .toolbar { NexFlexibleToolbarSpacer() }
         }
         // The header is drawn by each page (FadingHeader), WhatsApp-style: in a window its controls go in the
         // transparent system toolbar (which also keeps the window controls inside the sidebar); in full screen
         // the toolbar is hidden and the page draws them.
-        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+        .nexHiddenWindowToolbarBackground()
         .environment(\.windowIsFullScreen, isFullScreen)
         .environment(\.modalIsOpen, modalKey != nil)
         .background(WindowStyler(isFullScreen: $isFullScreen))

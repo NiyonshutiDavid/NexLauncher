@@ -55,23 +55,23 @@ private struct RepoView: View {
                     Text(error).textSelection(.enabled).font(.callout)
                     Spacer()
                     if git.pendingPullChoice {
-                        Button("Merge") { Task { await git.pull(strategy: .merge) } }.buttonStyle(.glass)
-                        Button("Rebase") { Task { await git.pull(strategy: .rebase) } }.buttonStyle(.glass)
+                        Button("Merge") { Task { await git.pull(strategy: .merge) } }.nexGlassButton()
+                        Button("Rebase") { Task { await git.pull(strategy: .rebase) } }.nexGlassButton()
                     }
                     Button { git.dismissPullChoice() } label: { Image(systemName: "xmark") }.buttonStyle(.plain)
                 }
                 .padding(12)
-                .glassEffect(.regular.tint(.orange.opacity(0.25)), in: .rect(cornerRadius: 14))
+                .nexGlass(.tinted(.orange.opacity(0.25)), in: .rect(cornerRadius: 14))
             }
             if git.needsIdentity && git.status != nil {
                 HStack {
                     Image(systemName: "person.crop.circle.badge.exclamationmark")
                     Text("Set your name and email before committing.")
                     Spacer()
-                    Button("Set up") { showIdentityForm() }.buttonStyle(.glassProminent)
+                    Button("Set up") { showIdentityForm() }.nexGlassProminentButton()
                 }
                 .padding(12)
-                .glassEffect(.regular, in: .rect(cornerRadius: 14))
+                .nexGlass(in: .rect(cornerRadius: 14))
             }
             Picker("", selection: $tab) { Text("Changes").tag(0); Text("History").tag(1) }
                 .pickerStyle(.segmented).labelsHidden().frame(maxWidth: 240)
@@ -105,7 +105,7 @@ private struct RepoView: View {
             } label: {
                 Label(git.status?.branch ?? (git.status?.isDetached == true ? "detached HEAD" : "—"), systemImage: "arrow.triangle.branch")
             }
-            .buttonStyle(.glass)
+            .nexGlassButton()
             .fixedSize()
             if let s = git.status {
                 if s.ahead > 0 { Badge(text: "↑\(s.ahead)", tint: .blue) }
@@ -113,10 +113,10 @@ private struct RepoView: View {
             }
             Spacer()
             if git.isBusy { ProgressView().controlSize(.small) }
-            Button { Task { await git.fetch() } } label: { Label("Fetch", systemImage: "arrow.clockwise") }.buttonStyle(.glass)
-            Button { Task { await git.pull(strategy: model.settings.settings.defaultPullStrategy.strategy) } } label: { Label("Pull", systemImage: "arrow.down.circle") }.buttonStyle(.glass)
-            Button { Task { await git.push() } } label: { Label("Push", systemImage: "arrow.up.circle") }.buttonStyle(.glassProminent)
-            Button { showIdentityForm() } label: { Image(systemName: "person.crop.circle") }.buttonStyle(.glass).help("Git name and email")
+            Button { Task { await git.fetch() } } label: { Label("Fetch", systemImage: "arrow.clockwise") }.nexGlassButton()
+            Button { Task { await git.pull(strategy: model.settings.settings.defaultPullStrategy.strategy) } } label: { Label("Pull", systemImage: "arrow.down.circle") }.nexGlassButton()
+            Button { Task { await git.push() } } label: { Label("Push", systemImage: "arrow.up.circle") }.nexGlassProminentButton()
+            Button { showIdentityForm() } label: { Image(systemName: "person.crop.circle") }.nexGlassButton().help("Git name and email")
         }
         .disabled(git.isBusy)
     }
@@ -163,7 +163,7 @@ private struct RepoView: View {
                 Text("Commit \(git.stagedCount > 0 ? "\(git.stagedCount) file\(git.stagedCount == 1 ? "" : "s")" : "all")")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.glassProminent)
+            .nexGlassProminentButton()
             .disabled((git.status?.changes.isEmpty ?? true) || git.isBusy)
         }
     }

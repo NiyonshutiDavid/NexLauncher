@@ -90,11 +90,11 @@ private struct FadingHeaderModifier<Center: View, Leading: View, Trailing: View>
             .toolbar {
                 if !inPage {
                     ToolbarItemGroup(placement: .navigation) { leading }
-                        .sharedBackgroundVisibility(.hidden)
+                        .nexNoSharedBackground()
                     ToolbarItem(placement: .principal) { center }
-                        .sharedBackgroundVisibility(.hidden)
+                        .nexNoSharedBackground()
                     ToolbarItemGroup(placement: .primaryAction) { trailing }
-                        .sharedBackgroundVisibility(.hidden)
+                        .nexNoSharedBackground()
                 }
             }
     }
@@ -131,7 +131,7 @@ struct HeaderCircleLabel: View {
             .foregroundStyle(prominent ? theme.onAccent : theme.fg)
             .frame(width: 38, height: 38)
             .background { if prominent { Circle().fill(theme.accent) } }
-            .glassEffect(prominent ? .regular.tint(theme.accent) : .regular, in: Circle())
+            .nexGlass(prominent ? .tinted(theme.accent) : .regular, in: Circle())
             .contentShape(Circle())
     }
 }
@@ -156,7 +156,7 @@ struct HeaderSearchField: View {
             }
         }
         .padding(.horizontal, 14).frame(height: 38)
-        .glassEffect(.regular, in: Capsule())
+        .nexGlass(in: Capsule())
     }
 }
 
@@ -171,7 +171,7 @@ struct HeaderViewModeToggle: View {
             segment(.folders, "list.bullet.indent", "Folders")
         }
         .padding(3)
-        .glassEffect(.regular, in: Capsule())
+        .nexGlass(in: Capsule())
     }
 
     private func segment(_ value: ViewMode, _ symbol: String, _ help: String) -> some View {

@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "NexLauncher",
-    platforms: [.macOS(.v26)],
+    platforms: [.macOS(.v14)],
     products: [.executable(name: "NexLauncher", targets: ["NexLauncher"])],
     dependencies: [
         .package(url: "https://github.com/migueldeicaza/SwiftTerm.git", from: "1.5.0"),

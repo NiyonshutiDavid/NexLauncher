@@ -27,7 +27,7 @@ struct IdentitySheet: View {
                     onSave(GitIdentity(name: name.trimmingCharacters(in: .whitespaces), email: email.trimmingCharacters(in: .whitespaces)), scope)
                     dismiss()
                 }
-                .buttonStyle(.glassProminent)
+                .nexGlassProminentButton()
                 .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || email.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }

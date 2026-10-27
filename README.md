@@ -1,6 +1,6 @@
 # NexLauncher
 
-A native macOS 26 app (SwiftUI + Liquid Glass) that finds the projects in your projects folder and runs their
+A native macOS app (SwiftUI, with Liquid Glass on macOS 26) that finds the projects in your projects folder and runs their
 frontend, backend, Flutter, Docker or other targets from one place. It comes with a GitHub-Desktop-style git panel,
 an embedded terminal, an AI assistant that hands tasks to Claude Code, Codex, Antigravity or Gemini, a menu bar
 panel and desktop widgets.
@@ -26,6 +26,9 @@ panel and desktop widgets.
 
 ## Install
 
+Runs on **macOS 14 Sonoma or later**, on Apple silicon and Intel Macs. On macOS 26 it uses the Liquid Glass look;
+on macOS 14 and 15 it uses the standard system materials and controls.
+
 Download the latest release from the website, unzip it and move **NexLauncher.app** to Applications.
 
 The app isn't notarised yet, so the first time macOS says it can't check it for malicious software. Click **Done**,
@@ -34,10 +37,11 @@ confirm. (Or run `xattr -dr com.apple.quarantine /Applications/NexLauncher.app` 
 
 ## Build from source
 
-Requires macOS 26 and Xcode 26 (Swift 6.2).
+Building needs Xcode 26 (Swift 6.2); the app it produces runs on macOS 14 and later.
 
 ```bash
-./build.sh            # builds NexLauncher.app next to this file
+./build.sh            # builds a universal NexLauncher.app (Apple silicon + Intel) next to this file
+ARCHS=arm64 ./build.sh  # quicker: one architecture
 ./build.sh --install  # also copies it to /Applications and launches it
 swift test            # unit tests
 ```

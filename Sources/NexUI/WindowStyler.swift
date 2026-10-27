@@ -27,6 +27,7 @@ struct WindowStyler: NSViewRepresentable {
         window.titlebarSeparatorStyle = .none
         window.titleVisibility = .hidden
         window.styleMask.insert(.fullSizeContentView)
+        window.isMovableByWindowBackground = true     // the title bar is hidden: drag the window by its background
         let binding = $isFullScreen
         let center = NotificationCenter.default
         coordinator.observers = [
