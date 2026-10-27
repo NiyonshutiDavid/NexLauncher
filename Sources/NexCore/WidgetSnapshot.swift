@@ -62,7 +62,7 @@ public enum SharedContainer {
 
     /// The app writes here and the sandboxed widget reads it through a read-only home-relative exception.
     /// (An App Group would need a provisioning profile; this keeps the personal build simple.)
-    public static var defaultDirectory: URL { AppSettings.supportDirectory }
+    public static var defaultDirectory: URL { Platform.paths.dataDirectory }
 
     public static func write(_ snapshot: WidgetSnapshot, to directory: URL = defaultDirectory) {
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

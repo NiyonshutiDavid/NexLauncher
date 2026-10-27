@@ -44,6 +44,8 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public var agentAutonomy: AgentAutonomy = .edit
     public var customAgentCommand: String = ""
     public var quickPanelShortcutEnabled: Bool = true
+    /// Keys this version doesn't know (written by a newer version or the other platform), kept as they were.
+    public var extras: [String: JSONValue] = [:]
 
     public init(displayName: String, scanRoot: URL, showDockIcon: Bool, pinnedProjectIDs: [String]) {
         self.displayName = displayName
@@ -82,6 +84,49 @@ public struct AppSettings: Codable, Equatable, Sendable {
         agentAutonomy = value(.agentAutonomy) ?? .edit
         customAgentCommand = value(.customAgentCommand) ?? ""
         quickPanelShortcutEnabled = value(.quickPanelShortcutEnabled) ?? true
+        let all = try decoder.container(keyedBy: AnyKey.self)
+        for key in all.allKeys where Keys(rawValue: key.stringValue) == nil {
+            if let v = try? all.decode(JSONValue.self, forKey: key) { extras[key.stringValue] = v }
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var extra = encoder.container(keyedBy: AnyKey.self)
+        for (key, v) in extras where Keys(rawValue: key) == nil { try extra.encode(v, forKey: AnyKey(key)) }
+        var c = encoder.container(keyedBy: Keys.self)
+        try c.encode(displayName, forKey: .displayName)
+        try c.encode(scanRoot, forKey: .scanRoot)
+        try c.encode(showDockIcon, forKey: .showDockIcon)
+        try c.encode(pinnedProjectIDs, forKey: .pinnedProjectIDs)
+        try c.encode(appearance, forKey: .appearance)
+        try c.encode(theme, forKey: .theme)
+        try c.encode(viewMode, forKey: .viewMode)
+        try c.encode(dismissedCTAs, forKey: .dismissedCTAs)
+        try c.encodeIfPresent(avatarColorHex, forKey: .avatarColorHex)
+        try c.encodeIfPresent(avatarPhotoPath, forKey: .avatarPhotoPath)
+        try c.encodeIfPresent(lastRun, forKey: .lastRun)
+        try c.encode(defaultBranch, forKey: .defaultBranch)
+        try c.encode(defaultPullStrategy, forKey: .defaultPullStrategy)
+        try c.encode(widgetsConfirmed, forKey: .widgetsConfirmed)
+        try c.encode(onboardingCompleted, forKey: .onboardingCompleted)
+        try c.encode(notificationsEnabled, forKey: .notificationsEnabled)
+        try c.encode(notifyReady, forKey: .notifyReady)
+        try c.encode(notifyCrash, forKey: .notifyCrash)
+        try c.encode(notifyAdded, forKey: .notifyAdded)
+        try c.encode(notifyOnlyInBackground, forKey: .notifyOnlyInBackground)
+        try c.encode(notifyAgents, forKey: .notifyAgents)
+        try c.encode(defaultAgent, forKey: .defaultAgent)
+        try c.encode(agentAutonomy, forKey: .agentAutonomy)
+        try c.encode(customAgentCommand, forKey: .customAgentCommand)
+        try c.encode(quickPanelShortcutEnabled, forKey: .quickPanelShortcutEnabled)
+    }
+
+    struct AnyKey: CodingKey {
+        var stringValue: String
+        var intValue: Int? { nil }
+        init(_ s: String) { stringValue = s }
+        init?(stringValue: String) { self.stringValue = stringValue }
+        init?(intValue: Int) { nil }
     }
 
     enum Keys: String, CodingKey {
@@ -110,16 +155,13 @@ public struct AppSettings: Codable, Equatable, Sendable {
     public static func defaults() -> AppSettings {
         AppSettings(
             displayName: firstName(from: NSFullUserName()),
-            scanRoot: realHome.appendingPathComponent("Documents/Nexventures"),
+            scanRoot: Platform.paths.defaultScanRoot,
             showDockIcon: true,
             pinnedProjectIDs: [])
     }
 
-    public static var supportDirectory: URL {
-        // Developer option for demo screenshots: `-NexSupportDir <path>` keeps settings, tasks and data apart.
-        if let dir = UserDefaults.standard.string(forKey: "NexSupportDir"), !dir.isEmpty { return URL(fileURLWithPath: dir) }
-        return realHome.appendingPathComponent("Library/Application Support/NexLauncher")
-    }
+    /// Settings and overrides (see `Platform.paths`).
+    public static var supportDirectory: URL { Platform.paths.configDirectory }
 }
 
 @Observable
@@ -139,5 +181,32 @@ public final class SettingsStore {
     public func save() {
         try? FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         if let data = try? JSONEncoder().encode(settings) { try? data.write(to: fileURL, options: .atomic) }
+    }
+}
+
+/// Any JSON value, for settings keys this version doesn't know.
+public enum JSONValue: Codable, Equatable, Sendable {
+    case null, bool(Bool), number(Double), string(String), array([JSONValue]), object([String: JSONValue])
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.singleValueContainer()
+        if c.decodeNil() { self = .null }
+        else if let b = try? c.decode(Bool.self) { self = .bool(b) }
+        else if let n = try? c.decode(Double.self) { self = .number(n) }
+        else if let s = try? c.decode(String.self) { self = .string(s) }
+        else if let a = try? c.decode([JSONValue].self) { self = .array(a) }
+        else { self = .object(try c.decode([String: JSONValue].self)) }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.singleValueContainer()
+        switch self {
+        case .null: try c.encodeNil()
+        case .bool(let b): try c.encode(b)
+        case .number(let n): try c.encode(n)
+        case .string(let s): try c.encode(s)
+        case .array(let a): try c.encode(a)
+        case .object(let o): try c.encode(o)
+        }
     }
 }
