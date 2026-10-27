@@ -1,0 +1,35 @@
+name: Linux Flatpak
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  flatpak:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate desktop entry and metadata
+        run: |
+          desktop-file-validate linux/net.nexventures.NexLauncher.desktop
+          appstreamcli validate --no-net linux/net.nexventures.NexLauncher.metainfo.xml
+      - name: Swift SDK extension
+        run: flatpak install -y --noninteractive --user flathub org.freedesktop.Sdk.Extension.swift6//26.08 || flatpak install -y --noninteractive flathub org.freedesktop.Sdk.Extension.swift6//26.08
+      - uses: flathub-infra/flatpak-github-actions/flatpak-builder@master
+        with:
+          bundle: NexLauncher-${{ github.ref_name }}-linux-${{ matrix.arch }}.flatpak
+          manifest-path: linux/net.nexventures.NexLauncher.yml
+          arch: ${{ matrix.arch }}
+          cache-key: flatpak-builder-${{ matrix.arch }}-${{ github.sha }}

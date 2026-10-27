@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>net.nexventures.NexLauncher</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>NexLauncher</name>
+  <summary>Run every project in your folder</summary>
+  <description>
+    <p>NexLauncher finds the apps in your projects folder and runs them, with git, a terminal and AI agents built in.</p>
+    <ul>
+      <li>Detects projects from their manifests and runs frontends, backends, Flutter apps and Docker services</li>
+      <li>Git: stage, commit, pull, push, branches and history</li>
+      <li>Hand tasks to Claude Code, Codex, Antigravity or Gemini CLI</li>
+      <li>Tasks per project and a terminal in every folder</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">net.nexventures.NexLauncher.desktop</launchable>
+  <url type="homepage">https://niyonshutidavid.github.io/NexLauncher/</url>
+  <url type="vcs-browser">https://github.com/NiyonshutiDavid/NexLauncher</url>
+  <developer id="net.nexventures">
+    <name>NiyonshutiDavid</name>
+  </developer>
+  <content_rating type="oars-1.1" />
+  <releases>
+    <release version="4.0.0" date="2026-10-27">
+      <description><p>First release for Linux.</p></description>
+    </release>
+  </releases>
+</component>

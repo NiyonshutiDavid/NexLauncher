@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=NexLauncher
+Comment=Run every project in your folder, with git, a terminal and AI agents
+Exec=nexlauncher
+Icon=net.nexventures.NexLauncher
+Terminal=false
+Categories=Development;IDE;
+Keywords=projects;run;dev server;git;terminal;flutter;ai;
+StartupNotify=true
