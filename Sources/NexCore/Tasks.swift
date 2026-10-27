@@ -27,7 +27,7 @@ public final class TaskStore: @unchecked Sendable {
     public private(set) var tasks: [ProjectTask]
     private let fileURL: URL
 
-    public static var defaultURL: URL { AppSettings.supportDirectory.appendingPathComponent("tasks.json") }
+    public static var defaultURL: URL { Platform.paths.dataDirectory.appendingPathComponent("tasks.json") }
 
     public init(fileURL: URL = TaskStore.defaultURL) {
         self.fileURL = fileURL
