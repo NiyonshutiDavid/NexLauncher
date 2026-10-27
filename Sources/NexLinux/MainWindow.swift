@@ -37,8 +37,13 @@ struct MainWindow: WindowView {
             scanned = true
             Shared.terminals.onChange = { state.setModel { $0.tick &+= 1 } }
             Shared.services.presentMainWindow = { gtk_window_present(window.pointer?.cast()); return true }
-            // On first launch the projects folder is chosen in onboarding, which scans it when it finishes.
-            if !state.app.showOnboarding { Task { await state.app.refresh() } }
+            Task {
+                // Tools from nvm, pyenv, asdf… are only on the interactive shell's PATH: read it once first.
+                HostCommand.setUserEnvironment(await ShellEnvironment.capture(shell: HostCommand.defaultShell,
+                                                                              flatpak: Platform.isFlatpak))
+                // On first launch the projects folder is chosen in onboarding, which scans it when it finishes.
+                if !state.app.showOnboarding { await state.app.refresh() }
+            }
         }
     }
 
