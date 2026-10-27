@@ -139,12 +139,25 @@ private final class StreamBox: @unchecked Sendable {
         return lines
     }
     func drained() { lock.lock(); drainedFlag = true; lock.unlock(); tryFinish() }
-    func exited(_ code: Int32) { lock.lock(); status = code; lock.unlock(); tryFinish() }
-    func cancel() { lock.lock(); let p = process; lock.unlock(); if p?.isRunning == true { p?.terminate() } }
 
-    private func tryFinish() {
+    /// Git has exited. On Linux, Foundation doesn't always report end-of-output after that, so the call also
+    /// finishes a second later without it (by then every line git wrote has been read).
+    func exited(_ code: Int32) {
+        lock.lock(); status = code; lock.unlock()
+        tryFinish()
+        DispatchQueue.global().asyncAfter(deadline: .now() + 1) { [self] in finish(requireDrained: false) }
+    }
+
+    func cancel() {
+        lock.lock(); let p = process; lock.unlock()
+        if p?.isRunning == true { p?.terminate() } else { fail(CancellationError()) }
+    }
+
+    private func tryFinish() { finish(requireDrained: true) }
+
+    private func finish(requireDrained: Bool) {
         lock.lock(); defer { lock.unlock() }
-        guard drainedFlag, let status, let c = continuation else { return }
+        guard drainedFlag || !requireDrained, let status, let c = continuation else { return }
         continuation = nil
         c.resume(returning: status)
     }
