@@ -11,11 +11,14 @@ public struct XDGAutostart: LoginItemControlling {
         self.exec = exec
     }
 
-    /// `~/.config/autostart` (or `$XDG_CONFIG_HOME/autostart`), starting the Flatpak or this binary.
-    public static func forCurrentUser(environment: [String: String] = ProcessInfo.processInfo.environment) -> XDGAutostart {
-        let config = environment["XDG_CONFIG_HOME"].flatMap { $0.isEmpty ? nil : URL(fileURLWithPath: $0) }
-            ?? AppSettings.realHome.appendingPathComponent(".config")
-        let exec = Platform.isFlatpak ? "flatpak run net.nexventures.NexLauncher" : (CommandLine.arguments.first ?? "nexlauncher")
+    /// `~/.config/autostart` (or `$XDG_CONFIG_HOME/autostart`), starting the Flatpak or this binary. Inside a
+    /// Flatpak, XDG_CONFIG_HOME is the app's private folder, so the real ~/.config is used (the app can write
+    /// there through its home-folder access).
+    public static func forCurrentUser(environment: [String: String] = ProcessInfo.processInfo.environment,
+                                      flatpak: Bool = Platform.isFlatpak, home: URL = AppSettings.realHome) -> XDGAutostart {
+        let fromEnv = flatpak ? nil : environment["XDG_CONFIG_HOME"].flatMap { $0.isEmpty ? nil : URL(fileURLWithPath: $0) }
+        let config = fromEnv ?? home.appendingPathComponent(".config")
+        let exec = flatpak ? "flatpak run net.nexventures.NexLauncher" : (CommandLine.arguments.first ?? "nexlauncher")
         return XDGAutostart(directory: config.appendingPathComponent("autostart"), exec: exec)
     }
 
