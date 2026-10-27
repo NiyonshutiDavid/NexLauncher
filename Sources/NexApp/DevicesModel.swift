@@ -52,11 +52,19 @@ public final class DevicesModel {
     public private(set) var busy: Set<String> = []
     private let shell: DeviceShell
     private let androidSDK: URL?
+    private let hostOS: HostOS
+    private let shellPath: String
 
-    public init(shell: DeviceShell = SystemDeviceShell(), androidSDK: URL? = DeviceParsers.androidSDK()) {
+    public init(shell: DeviceShell = SystemDeviceShell(), androidSDK: URL? = DeviceParsers.androidSDK(),
+                hostOS: HostOS = .current, shellPath: String? = nil) {
         self.shell = shell
         self.androidSDK = androidSDK
+        self.hostOS = hostOS
+        self.shellPath = shellPath ?? (hostOS == .macOS ? "/bin/zsh" : HostCommand.defaultShell)
     }
+
+    /// iOS simulators exist only on the Mac.
+    public var showsIOSSimulators: Bool { Platform.supportsIOSSimulators(on: hostOS) }
 
     public var androidHint: String? {
         androidSDK == nil ? "Install Android Studio and create a virtual device to see Android emulators here." : nil
@@ -67,8 +75,10 @@ public final class DevicesModel {
     public func refresh() async {
         isLoading = true
         defer { isLoading = false }
-        async let simJSON = shell.output(["/usr/bin/xcrun", "simctl", "list", "devices", "available", "-j"])
-        async let flutterJSON = shell.output(["/bin/zsh", "-lc", "flutter devices --machine"])
+        let showsSimulators = showsIOSSimulators
+        async let simJSON: String? = showsSimulators
+            ? shell.output(["/usr/bin/xcrun", "simctl", "list", "devices", "available", "-j"]) : nil
+        async let flutterJSON = shell.output([shellPath, "-lc", "flutter devices --machine"])
         let avdList: String? = if let emulatorPath { await shell.output([emulatorPath, "-list-avds"]) } else { nil }
         simulators = DeviceParsers.simulators(fromSimctlJSON: await simJSON ?? "")
         avds = DeviceParsers.avds(fromListOutput: avdList ?? "")

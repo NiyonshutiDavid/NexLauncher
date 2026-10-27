@@ -22,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: GTK 4 and libadwaita
-        run: apt-get update && apt-get install -y --no-install-recommends libadwaita-1-dev libgtk-4-dev pkg-config git
+        run: apt-get update && apt-get install -y --no-install-recommends libadwaita-1-dev libgtk-4-dev libvte-2.91-gtk4-dev pkg-config git
       - run: swift --version
       - run: swift build --build-tests
       - run: swift test

@@ -51,6 +51,11 @@ public final class OnboardingModel {
         return FileManager.default.fileExists(atPath: folder.path, isDirectory: &isDir) && isDir.boolValue
     }
 
+    /// Creates the chosen projects folder (a fresh Linux account often has none).
+    public func createFolder() throws {
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    }
+
     public var isFirst: Bool { step == .welcome }
     public var isLast: Bool { step == .extras }
     public var progress: Double { Double(step.rawValue) / Double(OnboardingStep.allCases.count - 1) }

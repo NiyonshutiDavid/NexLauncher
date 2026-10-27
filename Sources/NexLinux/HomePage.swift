@@ -21,6 +21,9 @@ struct HomePage: View {
                 Form {
                     EntryRow("Search projects", text: Binding(get: { model.searchText }, set: { model.searchText = $0 }))
                 }
+                if model.filter == .flutter {
+                    DevicesSection(model: model)
+                }
                 if model.filters.isActive {
                     FilterChips(model: model)
                 }

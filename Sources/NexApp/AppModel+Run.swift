@@ -141,7 +141,7 @@ extension AppModel {
     public func flutterDevices() async -> [FlutterDevice] {
         await Task.detached {
             let p = Process()
-            p.executableURL = URL(fileURLWithPath: "/bin/zsh")
+            p.executableURL = URL(fileURLWithPath: HostCommand.defaultShell)
             p.arguments = ["-lc", "flutter devices --machine"]
             let out = Pipe()
             p.standardOutput = out

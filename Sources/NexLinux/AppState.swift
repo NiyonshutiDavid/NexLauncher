@@ -36,5 +36,6 @@ extension AppModel {
              showOnlyUncommitted, statusMessage, gitBusy, detailTab, refreshToken, tasks, agentDraft, agentError,
              setup, pendingInstall, settings.settings, processes.states, processes.logs)
         for run in agentRuns { _ = (run.events, run.status) }
+        _ = (devices.avds, devices.connected, devices.isLoading, devices.busy)
     }
 }

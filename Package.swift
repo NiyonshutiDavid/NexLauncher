@@ -34,8 +34,9 @@ targets += [
 dependencies += [.package(url: "https://git.aparoksha.dev/aparoksha/adwaita-swift", revision: "af5598fbd6f2425841f426ad388d7a7edd6c90e6")]
 products += [.executable(name: "NexLinux", targets: ["NexLinux"])]
 targets += [
+    .systemLibrary(name: "CVte", pkgConfig: "vte-2.91-gtk4", providers: [.apt(["libvte-2.91-gtk4-dev"])]),
     .executableTarget(name: "NexLinux", dependencies: [
-        "NexApp", "NexCore", "NexProcess", "NexGit",
+        "NexApp", "NexCore", "NexProcess", "NexGit", "CVte",
         .product(name: "Adwaita", package: "adwaita-swift"),
         .product(name: "CAdw", package: "adwaita-swift"),
     ]),

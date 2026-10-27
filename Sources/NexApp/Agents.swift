@@ -116,7 +116,7 @@ public final class AgentCatalog {
 
     /// Finds a CLI through the login shell, also looking in ~/.local/bin.
     public static func detectCommand(_ binary: String) -> [String] {
-        ["/bin/zsh", "-lc", "export \(AgentKind.localBinPath); command -v \(binary) >/dev/null && \(binary) --version"]
+        [HostCommand.defaultShell, "-lc", "export \(AgentKind.localBinPath); command -v \(binary) >/dev/null && \(binary) --version"]
     }
 }
 

@@ -13,11 +13,11 @@ struct ContentRouter: View {
         } else if case .project(let id) = model.page, let project = model.project(id: id) {
             ProjectPage(model: model, project: project)
         } else if case .tasks = model.page {
-            ComingSoonPage(model: model, title: "Tasks")
+            TasksPage(model: model)
         } else if case .ai = model.page {
-            ComingSoonPage(model: model, title: "AI Assistant")
+            AIPage(model: model)
         } else if case .settings = model.page {
-            ComingSoonPage(model: model, title: "Settings")
+            SettingsPage(model: model)
         } else {
             HomePage(model: model)
         }

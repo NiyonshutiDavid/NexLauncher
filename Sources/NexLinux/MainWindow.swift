@@ -15,10 +15,27 @@ struct MainWindow: WindowView {
         } content: {
             ContentRouter(model: state.app)
         }
+        .dialog(visible: Binding(get: { state.app.setup != nil }, set: { if !$0 { state.app.cancelInstall() } }),
+                title: "Set up", width: 520, height: 420) {
+            SetupDialogContent(model: state.app)
+        }
+        .dialog(visible: Binding(get: { state.app.sheet != nil }, set: { if !$0 { state.app.sheet = nil } }),
+                title: "Add project", width: 520, height: 460) {
+            AddProjectDialogContent(model: state.app, mode: {
+                if case .addProject(let mode) = state.app.sheet { return mode }
+                return .newFolder
+            }())
+        }
+        .dialog(visible: Binding(get: { state.app.showOnboarding }, set: { if !$0 { state.app.skipOnboarding() } }),
+                title: "Welcome", width: 560, height: 460) {
+            OnboardingContent(model: state.app)
+        }
         .css { Theme.css }
         .onAppear {
             guard !scanned else { return }
             scanned = true
+            Shared.terminals.onChange = { state.setModel { $0.tick &+= 1 } }
+            Shared.services.presentMainWindow = { window.present(); return true }
             Task { await state.app.refresh() }
         }
     }

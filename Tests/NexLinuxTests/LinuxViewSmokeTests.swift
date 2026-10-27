@@ -30,4 +30,53 @@ import NexTestSupport
         model.page = .collection(model.tree.first { $0.kind == .collection }!.id)
         _ = ContentRouter(model: model).view
     }
+
+    @Test func projectPageEveryTab() async {
+        let sb = Sandbox()
+        sb.write("Site/package.json", Sandbox.vite)
+        let model = sb.makeModel()
+        model.reloadWidgets = {}
+        await model.refresh()
+        let project = model.projects[0]
+        model.page = .project(project.id)
+        for tab in DetailTab.allCases {
+            model.detailTab = tab
+            _ = ProjectPage(model: model, project: project).view
+        }
+        model.setup = SetupSession(project: project, steps: [])
+        _ = SetupDialogContent(model: model).view
+        _ = AddProjectDialogContent(model: model, mode: .clone).view
+    }
+
+    @Test func gitPanelWithoutRepo() {
+        let sb = Sandbox()
+        let model = sb.makeModel()
+        _ = GitPanel(model: model, repo: sb.root).view
+    }
+
+    @Test func tasksPageEmpty() {
+        let model = Sandbox().makeModel()
+        model.page = .tasks
+        _ = ContentRouter(model: model).view
+        _ = DevicesSection(model: model).view
+    }
+
+    @Test func aiPageAndPanel() async {
+        let sb = Sandbox()
+        sb.write("Site/package.json", Sandbox.vite)
+        let model = sb.makeModel()
+        model.reloadWidgets = {}
+        await model.refresh()
+        model.page = .ai
+        _ = ContentRouter(model: model).view
+        model.aiPanelProjectID = model.projects[0].id
+        _ = ProjectPage(model: model, project: model.projects[0]).view
+    }
+
+    @Test func settingsAndOnboarding() {
+        let model = Sandbox().makeModel()
+        model.page = .settings(.profile)
+        _ = ContentRouter(model: model).view
+        _ = OnboardingContent(model: model).view
+    }
 }

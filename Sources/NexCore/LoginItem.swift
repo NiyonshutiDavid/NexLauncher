@@ -20,22 +20,12 @@ public struct SMLoginItem: LoginItemControlling {
 }
 #endif
 
-/// Where the system has no login-item service the app knows about: always off, and says so.
-public struct UnsupportedLoginItem: LoginItemControlling {
-    public struct Unsupported: LocalizedError {
-        public var errorDescription: String? { "Launch at login isn't available on this system yet." }
-    }
-    public init() {}
-    public var isEnabled: Bool { false }
-    public func setEnabled(_ on: Bool) throws { if on { throw Unsupported() } }
-}
-
 /// The login-item controller for the system NexLauncher is running on.
 public func defaultLoginItem() -> LoginItemControlling {
     #if canImport(ServiceManagement)
     SMLoginItem()
     #else
-    UnsupportedLoginItem()
+    XDGAutostart.forCurrentUser()
     #endif
 }
 

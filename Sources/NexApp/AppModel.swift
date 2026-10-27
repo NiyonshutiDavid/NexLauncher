@@ -112,7 +112,7 @@ public final class AppModel {
         self.login = LaunchAtLogin(controller: login ?? defaultLoginItem())
         self.terminals = terminals
         self.notifier = notifier ?? NoopNotifier()
-        self.devices = devices ?? DevicesModel()
+        self.devices = devices ?? DevicesModel(hostOS: hostOS)
         self.taskStore = TaskStore(fileURL: tasksFile ?? TaskStore.defaultURL)
         self.tasks = taskStore.tasks
         self.agents = agents ?? AgentCatalog()
