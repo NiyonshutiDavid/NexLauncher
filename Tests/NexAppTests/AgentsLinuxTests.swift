@@ -18,4 +18,15 @@ import NexTestSupport
         #expect(services.openedWithApp.isEmpty)
         #expect(m.agentError == "Install Antigravity's command-line tool (agy) to run tasks here.")
     }
+
+    /// Inside the Flatpak, agent detection and device tools must run on the host, where they are installed.
+    @Test func deviceAndAgentCommandsRunOnTheHostInsideFlatpak() {
+        let detect = AgentCatalog.detectCommand("claude")
+        let inside = SystemDeviceShell(flatpak: true).invocation(detect)
+        #expect(inside.executable == HostCommand.flatpakSpawn)
+        #expect(inside.arguments == ["--host"] + detect)
+        let outside = SystemDeviceShell(flatpak: false).invocation(["/sdk/emulator/emulator", "-list-avds"])
+        #expect(outside.executable == "/sdk/emulator/emulator")
+        #expect(outside.arguments == ["-list-avds"])
+    }
 }

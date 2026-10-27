@@ -8,14 +8,19 @@ public protocol DeviceShell: Sendable {
     func launchDetached(_ args: [String])
 }
 
+/// Runs device and agent tools directly, or on the host inside a Flatpak (where they're installed).
 public struct SystemDeviceShell: DeviceShell {
-    public init() {}
+    let flatpak: Bool
+    public init(flatpak: Bool = Platform.isFlatpak) { self.flatpak = flatpak }
+
+    public func invocation(_ args: [String]) -> HostInvocation { HostCommand.argv(args, flatpak: flatpak) }
 
     public func output(_ args: [String]) async -> String? {
-        await Task.detached {
+        let inv = invocation(args)
+        return await Task.detached {
             let p = Process()
-            p.executableURL = URL(fileURLWithPath: args[0])
-            p.arguments = Array(args.dropFirst())
+            p.executableURL = URL(fileURLWithPath: inv.executable)
+            p.arguments = inv.arguments
             let out = Pipe()
             p.standardOutput = out
             p.standardError = FileHandle.nullDevice
@@ -32,9 +37,10 @@ public struct SystemDeviceShell: DeviceShell {
 
     /// Starts something that keeps running on its own (an emulator window).
     public func launchDetached(_ args: [String]) {
+        let inv = invocation(args)
         let p = Process()
-        p.executableURL = URL(fileURLWithPath: args[0])
-        p.arguments = Array(args.dropFirst())
+        p.executableURL = URL(fileURLWithPath: inv.executable)
+        p.arguments = inv.arguments
         p.standardOutput = FileHandle.nullDevice
         p.standardError = FileHandle.nullDevice
         p.standardInput = FileHandle.nullDevice

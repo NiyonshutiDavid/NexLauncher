@@ -17,8 +17,10 @@ public enum HostCommand {
         guard flatpak else { return HostInvocation(executable: shell, arguments: ["-lc", command], environment: environment) }
         var args = ["--host", "--watch-bus", "--directory=\(directory.path)", "--env=NEX_CMD=\(command)"]
         args += environment.sorted { $0.key < $1.key }.map { "--env=\($0.key)=\($0.value)" }
-        // $0 is the login shell; the script only refers to variables, never to the command text.
-        args += ["/bin/sh", "-c", #"echo "NEXPGID=$$"; exec setsid -w "$0" -lc "$NEX_CMD""#, shell]
+        // $0 is the login shell; the script only refers to variables, never to the command text. flatpak-spawn
+        // already makes this sh a group leader, so setsid forks: the group id is printed from inside the new
+        // session, where the service runs.
+        args += ["/bin/sh", "-c", #"exec setsid -w /bin/sh -c 'echo "NEXPGID=$$"; exec "$0" -lc "$NEX_CMD"' "$0""#, shell]
         return HostInvocation(executable: flatpakSpawn, arguments: args, environment: [:])
     }
 
@@ -32,6 +34,12 @@ public enum HostCommand {
                                   environment: [:])
         }
         return HostInvocation(executable: "/usr/bin/env", arguments: [tool] + arguments, environment: environment)
+    }
+
+    /// Runs an exact argument list (`args[0]` is the program): directly, or on the host inside a Flatpak.
+    public static func argv(_ args: [String], flatpak: Bool) -> HostInvocation {
+        if flatpak { return HostInvocation(executable: flatpakSpawn, arguments: ["--host"] + args, environment: [:]) }
+        return HostInvocation(executable: args[0], arguments: Array(args.dropFirst()), environment: [:])
     }
 
     /// The shell services run in. macOS keeps `/bin/zsh` as it always has; Linux uses the login shell when it

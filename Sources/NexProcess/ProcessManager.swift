@@ -74,7 +74,7 @@ public enum ProcessSpawner {
         defer { posix_spawnattr_destroy(&attrs) }
         // New session (pgid == pid), and don't leak the app's other descriptors (e.g. git's pipes) into the child.
         #if os(Linux)
-        posix_spawnattr_setflags(&attrs, Int16(spawnSetSID))
+        PipedSpawn.resetSignals(&attrs, flags: Int16(spawnSetSID))
         #else
         posix_spawnattr_setflags(&attrs, Int16(POSIX_SPAWN_SETSID | POSIX_SPAWN_CLOEXEC_DEFAULT))
         #endif

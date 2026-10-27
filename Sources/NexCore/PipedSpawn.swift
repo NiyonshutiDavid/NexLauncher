@@ -36,8 +36,13 @@ public enum PipedSpawn {
         let envp = environment.map { strdup("\($0.key)=\($0.value)") } + [nil]
         defer { (argv + envp).forEach { free($0) } }
 
+        var attrs = posix_spawnattr_t()
+        posix_spawnattr_init(&attrs)
+        defer { posix_spawnattr_destroy(&attrs) }
+        resetSignals(&attrs)
+
         var pid: pid_t = 0
-        let rc = posix_spawn(&pid, inv.executable, &actions, nil, argv, envp)
+        let rc = posix_spawn(&pid, inv.executable, &actions, &attrs, argv, envp)
         close(out[1])
         if !mergeStderr { close(err[1]) }
         guard rc == 0 else {
@@ -46,6 +51,18 @@ public enum PipedSpawn {
             throw POSIXError(POSIXErrorCode(rawValue: rc) ?? .ENOENT)
         }
         return Child(pid: pid, stdout: out[0], stderr: mergeStderr ? nil : err[0])
+    }
+
+    /// The child starts with no blocked signals and default handlers. Otherwise it inherits the spawning thread's
+    /// mask, and libdispatch's worker threads block SIGTERM, so the child could never be stopped.
+    public static func resetSignals(_ attrs: inout posix_spawnattr_t, flags: Int16 = 0) {
+        var empty = sigset_t(), defaults = sigset_t()
+        sigemptyset(&empty)
+        sigemptyset(&defaults)
+        for signal in [SIGTERM, SIGINT, SIGHUP, SIGQUIT, SIGPIPE] { sigaddset(&defaults, signal) }
+        posix_spawnattr_setsigmask(&attrs, &empty)
+        posix_spawnattr_setsigdefault(&attrs, &defaults)
+        posix_spawnattr_setflags(&attrs, flags | Int16(POSIX_SPAWN_SETSIGMASK | POSIX_SPAWN_SETSIGDEF))
     }
 
     /// Reaps `pid` on its own thread (not a GCD worker, so many waits can't starve the pool) and reports the

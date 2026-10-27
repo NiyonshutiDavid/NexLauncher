@@ -139,17 +139,7 @@ extension AppModel {
     }
 
     public func flutterDevices() async -> [FlutterDevice] {
-        await Task.detached {
-            let p = Process()
-            p.executableURL = URL(fileURLWithPath: HostCommand.defaultShell)
-            p.arguments = ["-lc", "flutter devices --machine"]
-            let out = Pipe()
-            p.standardOutput = out
-            p.standardError = FileHandle.nullDevice
-            guard (try? p.run()) != nil else { return [] }
-            let data = out.fileHandleForReading.readDataToEndOfFile()
-            p.waitUntilExit()
-            return Self.parseFlutterDevices(String(decoding: data, as: UTF8.self))
-        }.value
+        let json = await SystemDeviceShell().output([HostCommand.defaultShell, "-lc", "flutter devices --machine"])
+        return Self.parseFlutterDevices(json ?? "")
     }
 }
