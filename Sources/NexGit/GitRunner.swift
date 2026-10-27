@@ -54,7 +54,7 @@ public struct GitRunner: Sendable {
         return try await withCheckedThrowingContinuation { cont in
             let p = Process()
             Self.configure(p, args: args, dir: dir, extra: env)
-            let out = Pipe.closeOnExec(), err = Pipe.closeOnExec()
+            let out = Pipe(), err = Pipe()
             p.standardOutput = out
             p.standardError = err
             p.standardInput = FileHandle.nullDevice
@@ -94,7 +94,7 @@ extension GitRunner {
             try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Int32, Error>) in
                 let p = Process()
                 Self.configure(p, args: args, dir: dir, extra: extraEnvironmentForStream)
-                let pipe = Pipe.closeOnExec()
+                let pipe = Pipe()
                 p.standardOutput = pipe
                 p.standardError = pipe
                 p.standardInput = FileHandle.nullDevice

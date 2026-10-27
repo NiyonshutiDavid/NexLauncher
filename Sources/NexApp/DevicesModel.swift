@@ -16,7 +16,7 @@ public struct SystemDeviceShell: DeviceShell {
             let p = Process()
             p.executableURL = URL(fileURLWithPath: args[0])
             p.arguments = Array(args.dropFirst())
-            let out = Pipe.closeOnExec()
+            let out = Pipe()
             p.standardOutput = out
             p.standardError = FileHandle.nullDevice
             p.standardInput = FileHandle.nullDevice

@@ -3,7 +3,7 @@ import Foundation
 @testable import NexGit
 import NexTestSupport
 
-@Suite struct GitRunnerLinuxTests {
+@Suite(.timeLimit(.minutes(1))) struct GitRunnerLinuxTests {
     @Test func repoPathWithSpaces() async throws {
         let repo = TempRepo(name: "My Repo é")
         try "hello".write(to: repo.dir.appendingPathComponent("café notes.md"), atomically: true, encoding: .utf8)
@@ -23,4 +23,32 @@ import NexTestSupport
         #expect(inv.executable == "/usr/bin/env")
         #expect(inv.arguments == ["git", "status"])
     }
+
+    /// Every one of many overlapping git calls must finish (Linux once lost end-of-output and waited for the timeout).
+    @Test func manyConcurrentCallsAllFinish() async throws {
+        let repo = TempRepo()
+        let runner = GitRunner(extraEnvironment: repo.env)
+        try await withThrowingTaskGroup(of: String.self) { group in
+            for _ in 0..<40 { group.addTask { try await runner.run(["status", "--porcelain"], in: repo.dir, timeout: 10) } }
+            for try await _ in group {}
+        }
+    }
+
+    /// A streamed call (used for pull, push, clone) must return once git exits.
+    @Test func streamReturnsWhenGitExits() async throws {
+        let repo = TempRepo()
+        for i in 0..<20 { repo.git("commit", "--allow-empty", "-m", "c\(i)") }
+        let runner = GitRunner(extraEnvironment: repo.env)
+        let box = Counter()
+        let code = try await runner.stream(["log", "--oneline"], in: repo.dir) { _ in box.add() }
+        #expect(code == 0)
+        #expect(box.value == 20)
+    }
+}
+
+private final class Counter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var n = 0
+    func add() { lock.lock(); n += 1; lock.unlock() }
+    var value: Int { lock.lock(); defer { lock.unlock() }; return n }
 }
