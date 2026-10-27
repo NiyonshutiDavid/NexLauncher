@@ -29,3 +29,6 @@ begin
   return chosen;
 end;
 $$;
+
+-- The releases bucket also takes Flatpak bundles.
+update storage.buckets set allowed_mime_types = array['application/zip', 'application/vnd.flatpak'] where id = 'releases';
