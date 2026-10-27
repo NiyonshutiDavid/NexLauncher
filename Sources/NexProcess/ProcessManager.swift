@@ -188,6 +188,16 @@ public enum ProcessSpawner {
         if let pgid = hostPGID(for: pid) { return hostRunner(["--host", "kill", "-0", "--", "-\(pgid)"]) == 0 }
         return killpg(pid, 0) == 0
     }
+
+    /// `signalGroup` and `groupAlive` for callers on the main actor: a Flatpak service's host group is reached
+    /// through flatpak-spawn, which is waited for on a background thread.
+    public static func signalGroupInBackground(_ pid: pid_t, _ signal: Int32) async {
+        await Task.detached { signalGroup(pid, signal) }.value
+    }
+
+    public static func groupAliveInBackground(_ pid: pid_t) async -> Bool {
+        await Task.detached { groupAlive(pid) }.value
+    }
 }
 
 /// Owns the dev-server processes. Each service runs in a login shell in its own session
@@ -318,15 +328,17 @@ public final class ProcessManager {
         guard let pid = pids[id] else { return }
         stopRequested.insert(id)
         userStopped.insert(id)
-        ProcessSpawner.signalGroup(pid, SIGTERM)
+        await ProcessSpawner.signalGroupInBackground(pid, SIGTERM)
         if id.kind == .docker, let dir = directories[id] { await runShell(dockerStopCommand(dir), timeout: 60) }
-        // Done only when the leader is reaped AND nothing is left in its group; otherwise escalate.
+        // Done only when the leader is reaped AND nothing is left in its group; otherwise escalate. A host group
+        // costs a flatpak-spawn per check, so it's polled less often.
+        let poll: Duration = ProcessSpawner.hostPGID(for: pid) == nil ? .milliseconds(20) : .milliseconds(200)
         let deadline = Date().addingTimeInterval(killTimeout)
         while Date() < deadline {
-            if pids[id] != pid && !ProcessSpawner.groupAlive(pid) { return }
-            try? await Task.sleep(for: .milliseconds(20))
+            if pids[id] != pid, await !ProcessSpawner.groupAliveInBackground(pid) { return }
+            try? await Task.sleep(for: poll)
         }
-        ProcessSpawner.signalGroup(pid, SIGKILL)
+        await ProcessSpawner.signalGroupInBackground(pid, SIGKILL)
         let reapDeadline = Date().addingTimeInterval(2)
         while pids[id] == pid && Date() < reapDeadline { try? await Task.sleep(for: .milliseconds(20)) }
     }

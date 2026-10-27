@@ -91,4 +91,24 @@ import NexCore
         ProcessSpawner.signalGroup(99_003, SIGTERM)
         #expect(recorded == [["--host", "kill", "-TERM", "--", "-4242"]])
     }
+
+    /// Stop runs on the main actor; waiting for flatpak-spawn there would freeze the window.
+    @MainActor @Test func hostChecksDuringStopRunOffTheMainThread() async {
+        _ = ProcessSpawner.takeHostPGID(from: ["NEXPGID=4343"], pid: 99_004)
+        let onMain = Flag()
+        let previous = ProcessSpawner.hostRunner
+        ProcessSpawner.hostRunner = { _ in if Thread.isMainThread { onMain.set() }; return 1 }
+        defer { ProcessSpawner.hostRunner = previous }
+        await ProcessSpawner.signalGroupInBackground(99_004, SIGTERM)
+        let alive = await ProcessSpawner.groupAliveInBackground(99_004)
+        #expect(!alive)
+        #expect(!onMain.isSet)
+    }
+}
+
+private final class Flag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = false
+    func set() { lock.lock(); value = true; lock.unlock() }
+    var isSet: Bool { lock.lock(); defer { lock.unlock() }; return value }
 }
