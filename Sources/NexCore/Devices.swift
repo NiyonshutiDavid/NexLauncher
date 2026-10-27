@@ -50,9 +50,14 @@ public enum DeviceParsers {
     /// The Android SDK: $ANDROID_HOME, $ANDROID_SDK_ROOT, or Android Studio's default location.
     public static func androidSDK(environment: [String: String] = ProcessInfo.processInfo.environment,
                                   home: URL = AppSettings.realHome) -> URL? {
-        let candidates = [environment["ANDROID_HOME"], environment["ANDROID_SDK_ROOT"]].compactMap { $0 }.map { URL(fileURLWithPath: $0) }
-            + [home.appendingPathComponent("Library/Android/sdk")]
-        return candidates.first { FileManager.default.fileExists(atPath: $0.appendingPathComponent("emulator/emulator").path) }
+        let candidates = Platform.paths(os: .current, home: home, environment: environment, exists: { _ in false }).androidSDKCandidates
+        return androidSDK(candidates: candidates)
+    }
+
+    /// The first candidate that contains Android Studio's emulator.
+    public static func androidSDK(candidates: [URL],
+                                  exists: (URL) -> Bool = { FileManager.default.fileExists(atPath: $0.path) }) -> URL? {
+        candidates.first { exists($0.appendingPathComponent("emulator/emulator")) }
     }
 
     /// The simulators worth showing first: booted ones, then those on the newest iOS runtime, up to `limit`.

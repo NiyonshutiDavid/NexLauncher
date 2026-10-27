@@ -23,7 +23,7 @@
         <a href="changelog.html">Changelog</a>
         <a href="contribute.html">Contribute</a>
         <a href="https://github.com/NiyonshutiDavid/NexLauncher" rel="noopener">GitHub</a>
-        <a class="btn btn-primary btn-sm" data-download href="https://yrtrfuwykdxuppvlgprd.supabase.co/storage/v1/object/public/releases/NexLauncher-3.1.0.zip" data-version="3.1.0"><i class="ph-fill ph-apple-logo"></i>Download for Mac</a>
+        <a class="btn btn-primary btn-sm" data-download href="https://yrtrfuwykdxuppvlgprd.supabase.co/storage/v1/object/public/releases/NexLauncher-4.0.0.zip" data-version="4.0.0"><i class="ph-fill ph-download-simple"></i>Download</a>
       </nav>
     </div>
   </header>
@@ -49,6 +49,7 @@
           <h2>Install</h2>
         </div>
         <div class="prose">
+          <h3>On a Mac</h3>
           <ol>
             <li>Download the zip and open it. Move <strong>NexLauncher.app</strong> to your Applications folder.</li>
             <li>Open it. NexLauncher isn't notarised by Apple yet, so macOS says it can't check it. Click <strong>Done</strong>.</li>
@@ -56,7 +57,12 @@
           </ol>
           <p>You only do this once. If you prefer Terminal, this does the same:</p>
           <pre><code>xattr -dr com.apple.quarantine /Applications/NexLauncher.app</code></pre>
-          <p>NexLauncher runs on <strong>macOS 14 Sonoma</strong> or later, on Apple silicon and Intel Macs. On macOS 26 it uses the Liquid Glass look. It's free, and you can read and build every line of it <a href="contribute.html">from source</a>.</p>
+          <h3>On Linux</h3>
+          <p>NexLauncher comes as a Flatpak for x86_64 and ARM computers. You need <a href="https://flathub.org/setup" rel="noopener">Flatpak with Flathub set up</a>, which most distributions have already. Download the bundle for your processor, then install and open it:</p>
+          <pre><code>flatpak install --user NexLauncher-4.0.0-linux-x86_64.flatpak
+flatpak run net.nexventures.NexLauncher</code></pre>
+          <p>Afterwards it's in your app menu like any other app. Dev servers, git, the terminal and AI agents run on your system, with your own tools and shell, through Flatpak's host access. Desktop widgets, the menu bar panel and iOS simulators are Mac-only.</p>
+          <p>NexLauncher runs on <strong>macOS 14 Sonoma</strong> or later, on Apple silicon and Intel Macs (on macOS 26 it uses the Liquid Glass look), and on Linux desktops with Flatpak. It's free, and you can read and build every line of it <a href="contribute.html">from source</a>.</p>
         </div>
       </section>
 
@@ -111,7 +117,7 @@
               <source media="(prefers-color-scheme: dark)" srcset="assets/shots/flutter-dark-1224.webp">
               <img class="shot" src="assets/shots/flutter-light-1224.webp" width="1224" height="815" loading="lazy" alt="The Flutter page listing iOS simulators, Android emulators and devices ready to run.">
             </picture>
-            <figcaption>Flutter projects run on a simulator, an emulator, Chrome or the Mac itself.</figcaption>
+            <figcaption>Flutter projects run on a simulator, an emulator, Chrome or the computer itself.</figcaption>
           </figure>
         </div>
       </section>
@@ -177,9 +183,9 @@
       <div class="wrap contrib reveal">
         <div class="contrib-copy">
           <h2>Ready to try it?</h2>
-          <p class="lede">Free for macOS 14 and later. Takes a minute to set up.</p>
+          <p class="lede">Free for macOS 14 and later, and for Linux. Takes a minute to set up.</p>
         </div>
-        <a class="btn btn-primary" data-download href="https://yrtrfuwykdxuppvlgprd.supabase.co/storage/v1/object/public/releases/NexLauncher-3.1.0.zip" data-version="3.1.0"><i class="ph-fill ph-apple-logo"></i>Download for Mac</a>
+        <a class="btn btn-primary" data-download href="https://yrtrfuwykdxuppvlgprd.supabase.co/storage/v1/object/public/releases/NexLauncher-4.0.0.zip" data-version="4.0.0"><i class="ph-fill ph-download-simple"></i>Download</a>
       </div>
     </section>
   </main>

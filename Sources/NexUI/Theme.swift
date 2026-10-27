@@ -1,5 +1,6 @@
 import SwiftUI
 import NexCore
+import NexApp
 
 /// Resolved colours for the active theme and light/dark mode. Views read this from the environment
 /// and never hard-code colours.

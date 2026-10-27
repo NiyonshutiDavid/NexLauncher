@@ -1,5 +1,6 @@
 import SwiftUI
 import NexCore
+import NexApp
 
 /// Compact pinned projects at the top of Home (hidden while another filter is active).
 struct PinnedShelf: View {

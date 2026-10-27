@@ -23,7 +23,7 @@
         <a href="changelog.html">Changelog</a>
         <a href="contribute.html" aria-current="page">Contribute</a>
         <a href="https://github.com/NiyonshutiDavid/NexLauncher" rel="noopener">GitHub</a>
-        <a class="btn btn-primary btn-sm" data-download href="https://yrtrfuwykdxuppvlgprd.supabase.co/storage/v1/object/public/releases/NexLauncher-3.1.0.zip" data-version="3.1.0"><i class="ph-fill ph-apple-logo"></i>Download for Mac</a>
+        <a class="btn btn-primary btn-sm" data-download href="https://yrtrfuwykdxuppvlgprd.supabase.co/storage/v1/object/public/releases/NexLauncher-4.0.0.zip" data-version="4.0.0"><i class="ph-fill ph-download-simple"></i>Download</a>
       </nav>
     </div>
   </header>
@@ -60,6 +60,12 @@ swift test             # the test suites
 ./build.sh             # builds NexLauncher.app
 ./build.sh --install   # copies it to /Applications and opens it</code></pre>
           <p><code>build.sh</code> signs with your first Apple Development identity and falls back to ad-hoc signing. Desktop widgets need a real signature to load.</p>
+          <h3>On Linux</h3>
+          <p>The Linux app (<code>Sources/NexLinux</code>) uses GTK 4 and libadwaita through <a href="https://codeberg.org/aparoksha/adwaita-swift" rel="noopener">Adwaita for Swift</a>, which needs Swift 6.3, GTK 4.20 and libadwaita 1.8. The simplest way to get all of that is the Flatpak build, which uses the GNOME 50 SDK:</p>
+          <pre><code>flatpak install --user flathub org.gnome.Sdk//50 org.freedesktop.Sdk.Extension.swift6//25.08
+flatpak-builder --user --install --force-clean build linux/net.nexventures.NexLauncher.yml
+flatpak run net.nexventures.NexLauncher</code></pre>
+          <p>On a distribution with older GTK you can still build and test the shared core: <code>NEX_CORE_ONLY=1 swift test</code>.</p>
         </div>
       </section>
 

@@ -8,6 +8,21 @@ const REPO = "NiyonshutiDavid/NexLauncher";
 
 // Shown straight away and kept if Supabase can't be reached.
 const FALLBACK_RELEASES = [
+  { version: "4.0.0", title: "NexLauncher for Linux", published_at: "2026-10-27T20:00:00Z",
+    download_path: "NexLauncher-4.0.0.zip", size_bytes: 9493252, min_macos: "14.0",
+    files: {
+      arm64: { path: "NexLauncher-4.0.0-arm64.zip", size_bytes: 5478086 },
+      x86_64: { path: "NexLauncher-4.0.0-x86_64.zip", size_bytes: 5739510 },
+      "linux-x86_64": { path: "NexLauncher-4.0.0-linux-x86_64.flatpak", size_bytes: 16995888 },
+      "linux-aarch64": { path: "NexLauncher-4.0.0-linux-aarch64.flatpak", size_bytes: 15736560 },
+    },
+    summary: "NexLauncher now runs on Linux as a GNOME app, alongside the Mac app.",
+    changes: [
+      { kind: "added", text: "A Linux app (GTK 4 and libadwaita), as a Flatpak for x86_64 and ARM: projects, Run and Stop, logs, git, a terminal, AI agents, tasks, filters and settings." },
+      { kind: "added", text: "On Linux, dev servers, git and agents run on your system with your shell's PATH, including tools from nvm, pyenv and asdf." },
+      { kind: "changed", text: "The download button asks which computer you have: Mac (Apple silicon or Intel) or Linux." },
+      { kind: "fixed", text: "Git calls no longer wait until timing out when a program git started keeps running." },
+    ] },
   { version: "3.1.0", title: "Runs on macOS 14 and later, on Apple silicon and Intel", published_at: "2026-10-27T12:00:00Z",
     download_path: "NexLauncher-3.1.0.zip", size_bytes: 9379369, min_macos: "14.0",
     files: { arm64: { path: "NexLauncher-3.1.0-arm64.zip", size_bytes: 5422295 }, x86_64: { path: "NexLauncher-3.1.0-x86_64.zip", size_bytes: 5680550 } },
@@ -95,7 +110,10 @@ function setupReveal() {
 
 /* ---------- Latest release + download ---------- */
 const releases = new Map(FALLBACK_RELEASES.map((r) => [r.version, r]));
-const hasChipBuilds = (r) => Boolean(r?.files?.arm64 && r?.files?.x86_64);
+// files: per-download builds. Mac zips per chip ("arm64", "x86_64") and Linux Flatpak bundles ("linux-x86_64", "linux-aarch64").
+const MAC_ARCHS = ["arm64", "x86_64"], LINUX_ARCHS = ["linux-x86_64", "linux-aarch64"];
+const hasChoices = (r) => [...MAC_ARCHS, ...LINUX_ARCHS].some((a) => r?.files?.[a]);
+const hasLinux = (r) => LINUX_ARCHS.some((a) => r?.files?.[a]);
 
 function showRelease(release) {
   const fileURL = BUCKET_URL + release.download_path;
@@ -105,8 +123,8 @@ function showRelease(release) {
   });
   document.querySelectorAll("[data-release-version]").forEach((el) => (el.textContent = `Version ${release.version}`));
   document.querySelectorAll("[data-release-date]").forEach((el) => (el.textContent = formatDate(release.published_at)));
-  document.querySelectorAll("[data-release-size]").forEach((el) => (el.textContent = hasChipBuilds(release) ? "Apple silicon and Intel" : formatSize(release.size_bytes)));
-  document.querySelectorAll("[data-release-macos]").forEach((el) => (el.textContent = `macOS ${String(release.min_macos ?? "14.0").replace(/\.0$/, "")} or later`));
+  document.querySelectorAll("[data-release-size]").forEach((el) => (el.textContent = hasLinux(release) ? "Mac: Apple silicon and Intel · Linux: x86_64 and ARM" : hasChoices(release) ? "Apple silicon and Intel" : formatSize(release.size_bytes)));
+  document.querySelectorAll("[data-release-macos]").forEach((el) => (el.textContent = `macOS ${String(release.min_macos ?? "14.0").replace(/\.0$/, "")} or later${hasLinux(release) ? " and Linux" : ""}`));
 }
 
 // Counts the download, then fetches the chip's zip (or the universal one when arch is null).
@@ -118,8 +136,14 @@ async function startDownload(version, arch) {
   if (path) window.location.href = BUCKET_URL + path;
 }
 
-// Chrome and Firefox name the GPU (an "Apple M…" chip means Apple silicon). Safari hides it, so no guess there.
+// Linux: the user agent names the system, and often the processor. Mac: Chrome and Firefox name the GPU (an "Apple M…"
+// chip means Apple silicon); Safari hides it, so no guess there.
 function guessArch() {
+  const ua = navigator.userAgent;
+  if (/Linux/.test(ua) && !/Android/.test(ua)) {
+    const platform = navigator.userAgentData?.platform || navigator.platform || "";
+    return /aarch64|arm/i.test(platform + " " + ua) ? "linux-aarch64" : "linux-x86_64";
+  }
   try {
     const gl = document.createElement("canvas").getContext("webgl");
     const info = gl && gl.getExtension("WEBGL_debug_renderer_info");
@@ -141,25 +165,33 @@ function openChooser(version) {
     chooser.addEventListener("click", (event) => { if (event.target === chooser) chooser.close(); });   // click outside
   }
   const guess = guessArch();
-  const option = (arch, name, detail, icon) => `
+  const option = (arch, name, detail, icon) => !release.files?.[arch] ? "" : `
     <button class="choice" data-arch="${arch}" type="button">
       <i class="ph ${icon}"></i>
       <span><strong>${name}</strong><span>${detail}, ${formatSize(release.files[arch].size_bytes)}</span></span>
-      ${guess === arch ? '<em class="guess">Likely your Mac</em>' : ""}
+      ${guess === arch ? '<em class="guess">Likely yours</em>' : ""}
     </button>`;
+  const macOS = `macOS ${String(release.min_macos ?? "14.0").replace(/\.0$/, "")} or later`;
+  const mac = MAC_ARCHS.some((a) => release.files?.[a]);
   chooser.innerHTML = `
     <button class="chooser-close" type="button" aria-label="Close"><i class="ph ph-x"></i></button>
-    <h2 id="chooser-title">Which Mac do you have?</h2>
-    <p class="muted">NexLauncher ${escapeHTML(version)} for macOS ${String(release.min_macos ?? "14.0").replace(/\.0$/, "")} or later.</p>
+    <h2 id="chooser-title">${hasLinux(release) ? "Which computer do you have?" : "Which Mac do you have?"}</h2>
+    <p class="muted">NexLauncher ${escapeHTML(version)}${hasLinux(release) ? "" : ` for ${macOS}`}.</p>
+    ${mac ? `${hasLinux(release) ? `<h3 class="choices-title"><i class="ph ph-apple-logo"></i>Mac, ${macOS}</h3>` : ""}
     <div class="choices">
       ${option("arm64", "Apple silicon", "M1 and later", "ph-cpu")}
       ${option("x86_64", "Intel", "Intel Core processors", "ph-desktop")}
-    </div>
-    <p class="hint"><i class="ph ph-info"></i>Not sure? Open the Apple menu, choose About This Mac and look for Chip (Apple silicon) or Processor (Intel).</p>
-    <button class="universal" type="button">Or get the universal version (${formatSize(release.size_bytes)}), which runs on both.</button>`;
+    </div>` : ""}
+    ${hasLinux(release) ? `<h3 class="choices-title"><i class="ph ph-linux-logo"></i>Linux, as a Flatpak</h3>
+    <div class="choices">
+      ${option("linux-x86_64", "Intel or AMD", "x86_64", "ph-desktop-tower")}
+      ${option("linux-aarch64", "ARM", "aarch64", "ph-cpu")}
+    </div>` : ""}
+    <p class="hint"><i class="ph ph-info"></i><span>Not sure? On a Mac, open the Apple menu, choose About This Mac and look for Chip (Apple silicon) or Processor (Intel).${hasLinux(release) ? " On Linux, run <code>uname -m</code>." : ""}</span></p>
+    ${mac ? `<button class="universal" type="button">Or get the universal Mac version (${formatSize(release.size_bytes)}), which runs on both.</button>` : ""}`;
   chooser.querySelector(".chooser-close").addEventListener("click", () => chooser.close());
   chooser.querySelectorAll(".choice").forEach((b) => b.addEventListener("click", () => { chooser.close(); startDownload(version, b.dataset.arch); }));
-  chooser.querySelector(".universal").addEventListener("click", () => { chooser.close(); startDownload(version, null); });
+  chooser.querySelector(".universal")?.addEventListener("click", () => { chooser.close(); startDownload(version, null); });
   chooser.showModal();
   (chooser.querySelector(`.choice[data-arch="${guess}"]`) || chooser.querySelector(".choice")).focus();
 }
@@ -170,7 +202,7 @@ function bindDownloadButtons() {
     a.addEventListener("click", (event) => {
       event.preventDefault();
       const version = a.dataset.version;
-      if (hasChipBuilds(releases.get(version))) openChooser(version);
+      if (hasChoices(releases.get(version))) openChooser(version);
       else startDownload(version, null);
     });
   });

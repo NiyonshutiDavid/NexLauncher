@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import NexCore
+import NexApp
 
 /// Product-page style detail for a project or any folder: header, then Overview · Terminal · Logs · Git · Files.
 struct ProjectDetailView: View {

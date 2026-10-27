@@ -1,5 +1,6 @@
 import SwiftUI
 import NexCore
+import NexApp
 
 public enum IconStyle {
     /// A stable hue in 0...1 derived from the name (FNV-1a), so every project keeps its colour.
@@ -7,20 +8,6 @@ public enum IconStyle {
         var hash: UInt32 = 2166136261
         for byte in name.utf8 { hash = (hash ^ UInt32(byte)) &* 16777619 }
         return Double(hash) / Double(UInt32.max)
-    }
-}
-
-public enum ProjectSubtitle {
-    public static func text(for project: Project) -> String {
-        let kinds = ServiceKind.allCases.filter { k in project.targets.contains { $0.kind == k } }
-        func fw(_ kind: ServiceKind) -> String? { project.targets.first { $0.kind == kind }?.framework }
-        if project.isFullStack {
-            let names = [fw(.frontend), fw(.backend)].compactMap { $0 }
-            return names.isEmpty ? "Full-stack" : "Full-stack · " + names.joined(separator: " + ")
-        }
-        let titles = kinds.map { $0.rawValue.capitalized }.joined(separator: " + ")
-        if kinds.count == 1, let name = fw(kinds[0]), name != titles { return "\(titles) · \(name)" }
-        return titles
     }
 }
 

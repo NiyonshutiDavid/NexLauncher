@@ -1,5 +1,6 @@
 import SwiftUI
 import NexCore
+import NexApp
 
 /// A round header button that opens the filter panel; shows how many filters are on.
 struct HeaderFilterButton: View {

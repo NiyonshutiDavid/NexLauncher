@@ -28,7 +28,8 @@ import Foundation
     @Test func defaultScanRootFallsBack() {
         #expect(paths(.linux, existing: ["/home/alex/Projects", "/home/alex/Documents"]).defaultScanRoot.path == "/home/alex/Projects")
         #expect(paths(.linux, existing: ["/home/alex/Documents"]).defaultScanRoot.path == "/home/alex/Documents")
-        #expect(paths(.linux).defaultScanRoot.path == "/home/alex")
+        // Neither exists: suggest ~/Projects (onboarding offers to create it), never the whole home folder.
+        #expect(paths(.linux).defaultScanRoot.path == "/home/alex/Projects")
     }
 
     @Test func androidSDKCandidates() {

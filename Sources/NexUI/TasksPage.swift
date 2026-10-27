@@ -1,5 +1,6 @@
 import SwiftUI
 import NexCore
+import NexApp
 
 /// All tasks across projects.
 struct TasksPage: View {

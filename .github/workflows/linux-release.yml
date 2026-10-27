@@ -1,0 +1,41 @@
+name: Linux Flatpak
+
+on:
+  push:
+    tags: ["v*"]
+    branches: [main, build/linux]
+    # Also whenever the packaging changes, so the bundle is known to build before a release.
+    paths: ["linux/**", ".github/workflows/linux-release.yml"]
+  workflow_dispatch:
+
+jobs:
+  flatpak:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-50
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate desktop entry and metadata
+        run: |
+          desktop-file-validate linux/net.nexventures.NexLauncher.desktop
+          appstreamcli validate --no-net linux/net.nexventures.NexLauncher.metainfo.xml
+      - name: Swift SDK extension
+        run: |
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install -y --noninteractive --user flathub org.freedesktop.Sdk.Extension.swift6//25.08
+      - uses: flathub-infra/flatpak-github-actions/flatpak-builder@master
+        with:
+          # Tags name the bundle after the version; branch builds are "dev" (a branch name may contain a slash).
+          bundle: NexLauncher-${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}-linux-${{ matrix.arch }}.flatpak
+          manifest-path: linux/net.nexventures.NexLauncher.yml
+          arch: ${{ matrix.arch }}
+          cache-key: flatpak-builder-${{ matrix.arch }}-${{ github.sha }}

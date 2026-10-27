@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import NexCore
+import NexApp
 import NexGit
 
 struct SettingsPage: View {

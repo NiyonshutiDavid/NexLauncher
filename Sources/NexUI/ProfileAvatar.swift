@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import NexCore
+import NexApp
 
 /// Circle avatar: the chosen photo, else initials on the chosen (or accent) colour.
 public struct ProfileAvatar: View {

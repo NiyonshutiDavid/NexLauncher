@@ -44,7 +44,9 @@ public enum Platform {
         case .linux:
             let config = (fromEnv("XDG_CONFIG_HOME") ?? home.appendingPathComponent(".config")).appendingPathComponent("nexlauncher")
             let data = (fromEnv("XDG_DATA_HOME") ?? home.appendingPathComponent(".local/share")).appendingPathComponent("nexlauncher")
-            let scan = ["Projects", "Documents"].map { home.appendingPathComponent($0) }.first(where: exists) ?? home
+            // With neither folder, suggest ~/Projects (onboarding offers to create it) rather than scanning all of ~.
+            let scan = ["Projects", "Documents"].map { home.appendingPathComponent($0) }.first(where: exists)
+                ?? home.appendingPathComponent("Projects")
             return PlatformPaths(configDirectory: config, dataDirectory: data, defaultScanRoot: scan,
                                  androidSDKCandidates: androidFromEnv + [home.appendingPathComponent("Android/Sdk")])
         }

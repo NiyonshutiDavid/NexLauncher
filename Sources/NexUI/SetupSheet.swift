@@ -1,5 +1,6 @@
 import SwiftUI
 import NexCore
+import NexApp
 
 /// "Set up <project>": what will be installed, live progress, and the reason if something fails.
 struct SetupSheet: View {

@@ -1,5 +1,6 @@
 import SwiftUI
 import NexCore
+import NexApp
 
 /// "Run Flutter on…": devices that are ready, plus simulators and emulators that can be started from here.
 struct FlutterDevicePicker: View {

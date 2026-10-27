@@ -1,4 +1,5 @@
 import Foundation
+import NexCore
 
 public struct GitService: Sendable {
     let runner: GitRunner
@@ -143,8 +144,5 @@ public struct GitService: Sendable {
 }
 
 enum AppSettingsHome {
-    static var url: URL {
-        if let pw = getpwuid(getuid()), let dir = pw.pointee.pw_dir { return URL(fileURLWithPath: String(cString: dir)) }
-        return FileManager.default.homeDirectoryForCurrentUser
-    }
+    static var url: URL { AppSettings.realHome }
 }

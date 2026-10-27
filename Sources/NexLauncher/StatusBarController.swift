@@ -1,4 +1,5 @@
 import AppKit
+import NexApp
 import SwiftUI
 import Carbon.HIToolbox
 import Observation

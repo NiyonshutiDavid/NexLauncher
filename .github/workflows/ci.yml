@@ -15,12 +15,49 @@ jobs:
         run: sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)"
       - run: swift --version
       - run: swift test
+      - name: Widget extension sources
+        run: ./build.sh --check-widget
 
   linux:
+    # Shared core on Ubuntu 24.04 (its GTK is too old for Adwaita for Swift, so the Linux UI is left out).
     runs-on: ubuntu-24.04
-    container: swift:6.2-noble
+    timeout-minutes: 30
+    container: swift:6.3-noble
+    env:
+      NEX_CORE_ONLY: "1"
     steps:
       - uses: actions/checkout@v4
+      - run: apt-get update && apt-get install -y --no-install-recommends git
       - run: swift --version
       - run: swift build --build-tests
       - run: swift test
+
+  linux-ui:
+    # The Linux app and its tests in the GNOME 50 SDK the Flatpak ships with (VTE built by the manifest).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-50
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+      - name: SDK and Swift extension
+        run: |
+          flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+          flatpak install -y --noninteractive --user flathub org.gnome.Sdk//50 org.gnome.Platform//50 org.freedesktop.Sdk.Extension.swift6//25.08
+      - uses: actions/cache@v4
+        with:
+          path: .flatpak-builder
+          key: flatpak-deps-${{ hashFiles('linux/net.nexventures.NexLauncher.yml') }}
+      - name: Build dependencies (VTE)
+        run: flatpak-builder --user --force-clean --disable-rofiles-fuse --stop-at=nexlauncher build linux/net.nexventures.NexLauncher.yml
+      - name: Build and test NexLinux
+        # Built in /app/src (the build directory the sandbox owns); the checkout itself isn't writable in there.
+        run: |
+          mkdir -p build/files/src
+          cp -a Package.swift Package.resolved Sources Tests build/files/src/
+          flatpak build --share=network \
+            --env=PATH=/usr/lib/sdk/swift6/bin:/app/bin:/usr/bin \
+            --env=LD_LIBRARY_PATH=/usr/lib/sdk/swift6/lib:/app/lib \
+            --env=PKG_CONFIG_PATH=/app/lib/pkgconfig:/app/share/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig \
+            build sh -c "cd /app/src && swift --version && swift build --build-tests && swift test --filter NexLinuxTests"

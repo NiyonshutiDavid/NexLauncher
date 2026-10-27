@@ -1,0 +1,92 @@
+# Flatpak build of NexLauncher for Linux (GNOME 50 runtime, Swift 6 SDK extension).
+# Built by .github/workflows/linux-release.yml:  flatpak-builder --user --force-clean build linux/net.nexventures.NexLauncher.yml
+app-id: net.nexventures.NexLauncher
+runtime: org.gnome.Platform
+runtime-version: "50"
+sdk: org.gnome.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.swift6
+command: nexlauncher
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # Projects live anywhere in the home folder.
+  - --filesystem=home
+  # Dev servers, git, terminals and AI agents run on the host through flatpak-spawn --host.
+  - --talk-name=org.freedesktop.Flatpak
+  - --talk-name=org.freedesktop.Notifications
+build-options:
+  append-path: /usr/lib/sdk/swift6/bin
+  prepend-ld-library-path: /usr/lib/sdk/swift6/lib
+cleanup:
+  - /include
+  - /lib/pkgconfig
+  - /share/doc
+  - /share/gtk-doc
+  - /share/man
+  - "*.la"
+  - "*.a"
+modules:
+  # VTE 0.84 needs fmt and fast_float (headers only) and simdutf, none of them in the GNOME SDK.
+  - name: fast_float
+    buildsystem: cmake-ninja
+    sources:
+      - type: git
+        url: https://github.com/fastfloat/fast_float.git
+        tag: v8.3.2
+  - name: fmt
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DFMT_TEST=OFF
+      - -DFMT_DOC=OFF
+    sources:
+      - type: git
+        url: https://github.com/fmtlib/fmt.git
+        tag: "11.2.0"
+  - name: simdutf
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DBUILD_SHARED_LIBS=ON
+      - -DSIMDUTF_TESTS=OFF
+      - -DSIMDUTF_TOOLS=OFF
+      - -DSIMDUTF_BENCHMARKS=OFF
+    sources:
+      - type: git
+        url: https://github.com/simdutf/simdutf.git
+        tag: v7.7.1
+  - name: vte
+    buildsystem: meson
+    build-options:
+      cxxflags: -I/app/include
+    config-opts:
+      - -Dgtk3=false
+      - -Dgtk4=true
+      - -Dvapi=false
+      - -Dgir=false
+      - -Dglade=false
+      - -Ddocs=false
+      - -D_systemd=false
+    sources:
+      - type: git
+        url: https://gitlab.gnome.org/GNOME/vte.git
+        tag: "0.84.1"
+  - name: nexlauncher
+    buildsystem: simple
+    build-options:
+      # SwiftPM fetches Adwaita for Swift and its dependencies while building (CI only; Flathub would vendor them).
+      build-args:
+        - --share=network
+    sources:
+      - type: dir
+        path: ..
+    build-commands:
+      - swift build -c release --static-swift-stdlib --product NexLinux
+      - install -Dm755 .build/release/NexLinux /app/bin/nexlauncher
+      - install -Dm644 linux/net.nexventures.NexLauncher.desktop /app/share/applications/net.nexventures.NexLauncher.desktop
+      - install -Dm644 linux/net.nexventures.NexLauncher.metainfo.xml /app/share/metainfo/net.nexventures.NexLauncher.metainfo.xml
+      - install -Dm644 linux/icons/256.png /app/share/icons/hicolor/256x256/apps/net.nexventures.NexLauncher.png
+      - install -Dm644 linux/icons/512.png /app/share/icons/hicolor/512x512/apps/net.nexventures.NexLauncher.png

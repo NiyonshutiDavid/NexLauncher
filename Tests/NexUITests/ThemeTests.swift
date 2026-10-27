@@ -2,6 +2,8 @@ import Testing
 import Foundation
 import NexCore
 @testable import NexUI
+import NexTestSupport
+import NexApp
 
 private func target(_ kind: ServiceKind, _ fw: String?) -> ServiceTarget {
     ServiceTarget(kind: kind, directory: URL(fileURLWithPath: "/tmp"), framework: fw, command: "")

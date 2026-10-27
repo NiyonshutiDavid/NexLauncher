@@ -1,4 +1,5 @@
 import SwiftUI
+import NexApp
 
 struct DiffView: View {
     let text: String

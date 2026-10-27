@@ -1,5 +1,6 @@
 import SwiftUI
 import NexCore
+import NexApp
 
 /// An illustration that gently floats, used where something is happening or inviting action.
 struct AnimatedIllustration: View {

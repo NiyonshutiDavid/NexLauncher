@@ -1,5 +1,6 @@
 import SwiftUI
 import NexCore
+import NexApp
 
 /// The Folders view: an expandable outline that mirrors the folders on disk. Folders load lazily as they open.
 struct FolderOutlineView: View {

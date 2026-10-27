@@ -1,4 +1,5 @@
 import SwiftUI
+import NexApp
 
 // NexLauncher runs on macOS 14 and later. These helpers use the macOS 26 Liquid Glass look (and macOS 15
 // toolbar options) where the system has them, and plain materials and standard controls before that.

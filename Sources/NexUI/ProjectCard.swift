@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import NexCore
+import NexApp
 
 struct ProjectCard: View {
     @Bindable var model: AppModel

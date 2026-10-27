@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import NexCore
+import NexApp
 import NexProcess
 
 /// The main App Store-style button on a card: Run (with a menu of choices) or Stop.

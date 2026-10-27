@@ -1,4 +1,5 @@
 import SwiftUI
+import NexApp
 
 struct GreetingHeader: View {
     @Environment(\.theme) private var theme

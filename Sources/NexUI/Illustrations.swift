@@ -1,10 +1,7 @@
 import SwiftUI
 import NexCore
+import NexApp
 
-public enum IllustrationKind: CaseIterable, Sendable {
-    case rocket, branchGraph, terminal, swatches, folders, telescope, widgets, power
-    case pin, play, layers, phone, checklist, robot
-}
 
 /// Flat vector illustrations drawn in code. They scale to their container and use only theme colours,
 /// so they follow the theme and light/dark automatically.

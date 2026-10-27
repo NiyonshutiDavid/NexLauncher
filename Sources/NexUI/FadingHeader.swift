@@ -1,5 +1,6 @@
 import SwiftUI
 import NexCore
+import NexApp
 
 /// WhatsApp-style header: no bar. Floating glass buttons and a centred title (in the transparent window toolbar)
 /// over a soft fade, so the content dissolves beneath it.

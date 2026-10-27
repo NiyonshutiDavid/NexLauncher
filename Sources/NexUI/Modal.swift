@@ -1,4 +1,5 @@
 import SwiftUI
+import NexApp
 
 /// Closes the pop-up a view is shown in (the in-window replacement for a sheet's `dismiss`).
 struct ModalCloseAction {
@@ -12,11 +13,10 @@ extension EnvironmentValues {
     @Entry var modalIsOpen = false
 }
 
-/// Any pop-up content presented over the whole window (e.g. the git name and email form).
-public struct ModalContent: Identifiable {
-    public let id = UUID()
-    let view: AnyView
-    init<V: View>(_ view: V) { self.view = AnyView(view) }
+extension ModalContent {
+    /// A SwiftUI pop-up.
+    init<V: View>(_ view: V) { self.init(payload: AnyView(view)) }
+    var view: AnyView { payload as? AnyView ?? AnyView(EmptyView()) }
 }
 
 /// Pop-ups drawn inside the window rather than as system sheets: in full screen macOS reveals its opaque title
