@@ -27,6 +27,7 @@ struct BreadcrumbBar: View {
             }
         }
         .padding(.horizontal, 12).frame(height: 34)
+        .fixedSize()                            // the toolbar would otherwise squeeze it to "Proje…"
         .glassEffect(.regular, in: Capsule())
         .frame(maxWidth: 520)
         .animation(.spring(duration: 0.3), value: crumbs.map(\.title))
@@ -37,7 +38,7 @@ struct BreadcrumbBar: View {
             Button { onSelect(page) } label: {
                 HStack(spacing: 4) {
                     if first { Image(systemName: "square.grid.2x2").font(.system(size: 10, weight: .semibold)) }
-                    Text(crumb.title).lineLimit(1)
+                    Text(crumb.title).lineLimit(1).fixedSize()
                 }
                 .font(.callout.weight(.medium)).foregroundStyle(theme.fg2)
                 .padding(.horizontal, 6).padding(.vertical, 4)
