@@ -1,5 +1,8 @@
 import Foundation
 import NexCore
+#if canImport(Glibc)
+import Glibc
+#endif
 
 public struct GitResult: Sendable {
     public let code: Int32
@@ -40,6 +43,33 @@ public struct GitRunner: Sendable {
         p.environment = environment
     }
 
+    /// Starts git with stdin from /dev/null; `onExit` gets the exit status. Without `mergeStderr`, stderr has its
+    /// own handle. On Linux git is started directly (see `PipedSpawn`), elsewhere through `Process`.
+    static func launch(_ args: [String], in dir: URL, extra: [String: String], mergeStderr: Bool,
+                       onExit: @escaping @Sendable (Int32) -> Void) throws -> GitLaunch {
+        #if os(Linux)
+        let inv = invocation(args, in: dir, environment: gitEnvironment(extra), flatpak: Platform.isFlatpak)
+        let child = try PipedSpawn.start(inv, in: dir, mergeStderr: mergeStderr)
+        let exit = ExitFlag()
+        PipedSpawn.onExit(child.pid) { code in exit.set(); onExit(code) }
+        return GitLaunch(out: FileHandle(fileDescriptor: child.stdout, closeOnDealloc: true),
+                         err: child.stderr.map { FileHandle(fileDescriptor: $0, closeOnDealloc: true) },
+                         terminate: { if !exit.isSet { kill(child.pid, SIGTERM) } },
+                         isRunning: { !exit.isSet })
+        #else
+        let p = Process()
+        configure(p, args: args, dir: dir, extra: extra)
+        let out = Pipe(), err = mergeStderr ? nil : Pipe()
+        p.standardOutput = out
+        p.standardError = err ?? out
+        p.standardInput = FileHandle.nullDevice
+        p.terminationHandler = { proc in onExit(proc.terminationStatus) }
+        try p.run()
+        return GitLaunch(out: out.fileHandleForReading, err: err?.fileHandleForReading,
+                         terminate: { if p.isRunning { p.terminate() } }, isRunning: { p.isRunning })
+        #endif
+    }
+
     /// Returns stdout, throwing `.commandFailed` on a non-zero exit.
     public func run(_ args: [String], in dir: URL, timeout: TimeInterval = 30) async throws -> String {
         let result = try await runRaw(args, in: dir, timeout: timeout)
@@ -52,35 +82,30 @@ public struct GitRunner: Sendable {
     public func runRaw(_ args: [String], in dir: URL, timeout: TimeInterval = 30) async throws -> GitResult {
         let env = extraEnvironment
         return try await withCheckedThrowingContinuation { cont in
-            let p = Process()
-            Self.configure(p, args: args, dir: dir, extra: env)
-            let out = Pipe(), err = Pipe()
-            p.standardOutput = out
-            p.standardError = err
-            p.standardInput = FileHandle.nullDevice
-
             // Event-driven (no blocked threads) so many concurrent git calls can't starve GCD.
             let state = RunState(cont)
-            // A pipe is drained when its handler sees an empty read (EOF); we finish once both pipes
-            // are drained AND the process has exited, so no output can be lost to a race. A child git leaves
-            // behind can hold the pipes open (and Linux sometimes never reports EOF), so a second after git
-            // exits the call finishes with what was read.
-            out.fileHandleForReading.readabilityHandler = { h in
-                let d = h.availableData
-                if d.isEmpty { h.readabilityHandler = nil; state.outDrained() } else { state.appendOut(d) }
-            }
-            err.fileHandleForReading.readabilityHandler = { h in
-                let d = h.availableData
-                if d.isEmpty { h.readabilityHandler = nil; state.errDrained() } else { state.appendErr(d) }
-            }
-            p.terminationHandler = { proc in state.exited(code: proc.terminationStatus) }
-            do { try p.run() } catch {
+            let git: GitLaunch
+            do {
+                git = try Self.launch(args, in: dir, extra: env, mergeStderr: false) { state.exited(code: $0) }
+            } catch {
                 state.fail(GitError.commandFailed(code: -1, stderr: error.localizedDescription))
                 return
             }
+            // A pipe is drained when its handler sees an empty read (EOF); we finish once both pipes
+            // are drained AND the process has exited, so no output can be lost to a race. A child git leaves
+            // behind can hold the pipes open, so a second after git exits the call finishes with what was read.
+            state.handles = [git.out, git.err!]
+            git.out.readabilityHandler = { h in
+                let d = h.availableData
+                if d.isEmpty { h.readabilityHandler = nil; state.outDrained() } else { state.appendOut(d) }
+            }
+            git.err!.readabilityHandler = { h in
+                let d = h.availableData
+                if d.isEmpty { h.readabilityHandler = nil; state.errDrained() } else { state.appendErr(d) }
+            }
             DispatchQueue.global().asyncAfter(deadline: .now() + timeout) {
                 // Fires even if git already exited but a child still holds the pipe open.
-                if p.isRunning { p.terminate() }
+                git.terminate()
                 state.fail(GitError.timeout)
             }
         }
@@ -94,26 +119,21 @@ extension GitRunner {
         let box = StreamBox()
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Int32, Error>) in
-                let p = Process()
-                Self.configure(p, args: args, dir: dir, extra: extraEnvironmentForStream)
-                let pipe = Pipe()
-                p.standardOutput = pipe
-                p.standardError = pipe
-                p.standardInput = FileHandle.nullDevice
-                box.process = p
                 box.continuation = cont
-                pipe.fileHandleForReading.readabilityHandler = { h in
+                let git: GitLaunch
+                do {
+                    git = try Self.launch(args, in: dir, extra: extraEnvironmentForStream, mergeStderr: true) { box.exited($0) }
+                } catch {
+                    box.fail(GitError.commandFailed(code: -1, stderr: error.localizedDescription))
+                    return
+                }
+                box.git = git
+                git.out.readabilityHandler = { h in
                     let d = h.availableData
                     if d.isEmpty { h.readabilityHandler = nil; box.drained(); return }
                     for line in box.split(d) { onLine(line) }
                 }
-                p.terminationHandler = { proc in box.exited(proc.terminationStatus) }
-                do { try p.run() } catch {
-                    pipe.fileHandleForReading.readabilityHandler = nil
-                    box.fail(GitError.commandFailed(code: -1, stderr: error.localizedDescription))
-                    return
-                }
-                if Task.isCancelled { p.terminate() }
+                if Task.isCancelled { git.terminate() }
             }
         } onCancel: {
             box.cancel()
@@ -121,9 +141,23 @@ extension GitRunner {
     }
 }
 
+struct GitLaunch: @unchecked Sendable {
+    let out: FileHandle
+    let err: FileHandle?
+    let terminate: @Sendable () -> Void
+    let isRunning: @Sendable () -> Bool
+}
+
+final class ExitFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = false
+    func set() { lock.lock(); value = true; lock.unlock() }
+    var isSet: Bool { lock.lock(); defer { lock.unlock() }; return value }
+}
+
 private final class StreamBox: @unchecked Sendable {
     private let lock = NSLock()
-    var process: Process?
+    var git: GitLaunch?
     var continuation: CheckedContinuation<Int32, Error>?
     private var pending = Data()
     private var drainedFlag = false, status: Int32?
@@ -151,8 +185,8 @@ private final class StreamBox: @unchecked Sendable {
     }
 
     func cancel() {
-        lock.lock(); let p = process; lock.unlock()
-        if p?.isRunning == true { p?.terminate() } else { fail(CancellationError()) }
+        lock.lock(); let git = git; lock.unlock()
+        if git?.isRunning() == true { git?.terminate() } else { fail(CancellationError()) }
     }
 
     private func tryFinish() { finish(requireDrained: true) }
@@ -161,6 +195,7 @@ private final class StreamBox: @unchecked Sendable {
         lock.lock(); defer { lock.unlock() }
         guard drainedFlag || !requireDrained, let status, let c = continuation else { return }
         continuation = nil
+        git?.out.readabilityHandler = nil
         c.resume(returning: status)
     }
     func fail(_ error: Error) {
@@ -176,6 +211,8 @@ private final class RunState: @unchecked Sendable {
     private var cont: CheckedContinuation<GitResult, Error>?
     private var out = Data(), err = Data()
     private var outDone = false, errDone = false, code: Int32?
+    /// Stops reading when the call finishes (a lingering child may never close the pipes).
+    var handles: [FileHandle] = []
 
     init(_ cont: CheckedContinuation<GitResult, Error>) { self.cont = cont }
 
@@ -195,6 +232,7 @@ private final class RunState: @unchecked Sendable {
         lock.lock(); defer { lock.unlock() }
         guard (outDone && errDone) || !requireDrained, let code, let c = cont else { return }
         cont = nil
+        handles.forEach { $0.readabilityHandler = nil }
         c.resume(returning: GitResult(
             code: code,
             stdout: String(decoding: out, as: UTF8.self),

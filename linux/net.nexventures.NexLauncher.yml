@@ -30,7 +30,13 @@ cleanup:
   - "*.la"
   - "*.a"
 modules:
-  # VTE 0.84 needs fmt (headers only) and simdutf, neither in the GNOME SDK.
+  # VTE 0.84 needs fmt and fast_float (headers only) and simdutf, none of them in the GNOME SDK.
+  - name: fast_float
+    buildsystem: cmake-ninja
+    sources:
+      - type: git
+        url: https://github.com/fastfloat/fast_float.git
+        tag: v8.3.2
   - name: fmt
     buildsystem: cmake-ninja
     config-opts:
@@ -54,6 +60,8 @@ modules:
         tag: v7.7.1
   - name: vte
     buildsystem: meson
+    build-options:
+      cxxflags: -I/app/include
     config-opts:
       - -Dgtk3=false
       - -Dgtk4=true
